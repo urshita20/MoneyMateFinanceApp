@@ -1,0 +1,10 @@
+{
+  "description": "An AI-powered personal finance platform offering expense tracking, budgeting, insights, and receipt scanning to help users manage money effortlessly.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

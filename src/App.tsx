@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { Page } from './types'
+import { api } from './services/api'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import Onboarding from './pages/Onboarding'
@@ -38,16 +39,26 @@ const juniorPages: Page[] = ['junior-dashboard', 'junior-goals', 'junior-quests'
 export default function App() {
   const [page, setPage] = useState<Page>('landing')
   const [dark, setDark] = useState(false)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
   }, [dark])
 
+  useEffect(() => {
+    // Load current authenticated user on boot
+    api.auth.getMe().then(res => {
+      if (res.success && res.user) {
+        setUser(res.user)
+      }
+    }).catch(console.error)
+  }, [])
+
   const nav = (p: Page) => setPage(p)
   const toggleDark = () => setDark(d => !d)
 
   if (page === 'landing') return <Landing onNav={nav} />
-  if (page === 'login' || page === 'signup') return <Auth onNav={nav} initial={page} />
+  if (page === 'login' || page === 'signup') return <Auth onNav={nav} initial={page} onAuthSuccess={(u) => setUser(u)} />
   if (page === 'onboarding') return <Onboarding onNav={nav} />
   if (page === 'profile-switcher') return <ProfileSwitcher onNav={nav} />
 
@@ -65,7 +76,7 @@ export default function App() {
 
   return (
     <Layout page={page} onNav={nav} dark={dark} onToggleDark={toggleDark}>
-      {page === 'dashboard' && <Dashboard onNav={nav} />}
+      {page === 'dashboard' && <Dashboard onNav={nav} user={user} />}
       {page === 'transactions' && <Transactions />}
       {page === 'budget' && <Budget />}
       {page === 'insights' && <AIInsights />}

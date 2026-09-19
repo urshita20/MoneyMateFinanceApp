@@ -1,21 +1,49 @@
 import { useState } from 'react'
 import { Eye, EyeOff, TrendingUp, ArrowRight, Github } from 'lucide-react'
 import type { Page } from '../types'
+import { api } from '../services/api'
 
 interface AuthProps {
   onNav: (p: Page) => void
   initial: 'login' | 'signup'
+  onAuthSuccess?: (user: any) => void
 }
 
-export default function Auth({ onNav, initial }: AuthProps) {
+export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initial)
   const [showPass, setShowPass] = useState(false)
   const [forgotPass, setForgotPass] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
   const [form, setForm] = useState({ name: '', email: '', password: '' })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onNav('onboarding')
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      if (mode === 'signup') {
+        const res = await api.auth.register(form.name || 'New User', form.email, form.password)
+        if (res.success && res.user) {
+          if (onAuthSuccess) onAuthSuccess(res.user)
+          onNav('dashboard')
+        } else {
+          setErrorMsg(res.message || 'Registration failed')
+        }
+      } else {
+        const res = await api.auth.login(form.email, form.password)
+        if (res.success && res.user) {
+          if (onAuthSuccess) onAuthSuccess(res.user)
+          onNav('dashboard')
+        } else {
+          setErrorMsg(res.message || 'Invalid credentials')
+        }
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Authentication error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -123,15 +151,22 @@ export default function Auth({ onNav, initial }: AuthProps) {
                 </button>
               </p>
 
+              {errorMsg && (
+                <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-medium">
+                  {errorMsg}
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
                     <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
                     <input
                       type="text"
-                      placeholder="Arjun Sharma"
+                      placeholder="Alex Johnson"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                      required
                       className="w-full px-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
                     />
                   </div>
@@ -141,9 +176,10 @@ export default function Auth({ onNav, initial }: AuthProps) {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email address</label>
                   <input
                     type="email"
-                    placeholder="arjun@gmail.com"
+                    placeholder="alex@example.com"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                    required
                     className="w-full px-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
                   />
                 </div>
@@ -156,6 +192,7 @@ export default function Auth({ onNav, initial }: AuthProps) {
                       placeholder="••••••••"
                       value={form.password}
                       onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                      required
                       className="w-full px-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all pr-11"
                     />
                     <button
@@ -166,22 +203,14 @@ export default function Auth({ onNav, initial }: AuthProps) {
                       {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
-                  {mode === 'login' && (
-                    <button
-                      type="button"
-                      onClick={() => setForgotPass(true)}
-                      className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline mt-1.5 block text-right"
-                    >
-                      Forgot password?
-                    </button>
-                  )}
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                  disabled={loading}
+                  className="w-full flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm shadow-emerald-500/25 hover:shadow-emerald-500/40 disabled:opacity-50"
                 >
-                  {mode === 'login' ? 'Sign in' : 'Create account'}
+                  {loading ? 'Processing...' : mode === 'login' ? 'Sign in' : 'Create account'}
                   <ArrowRight size={15} />
                 </button>
               </form>

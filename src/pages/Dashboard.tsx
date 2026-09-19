@@ -57,7 +57,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
     { title: 'Health Score', value: summary ? `${summary.healthScore} / 100` : '74 / 100', change: 'Good', icon: Heart, bg: 'bg-amber-500', positive: true },
   ]
 
-  const userName = user?.name || 'Alex Johnson'
+  const userName = user?.name || 'Guest User'
 
   return (
     <div className="space-y-6 max-w-[1280px]">
@@ -65,11 +65,21 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Good morning, {userName} 👋</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Here's your financial overview for July 2025</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Here's your live financial overview</p>
         </div>
-        <span className="text-sm text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
-          July 19, 2025
-        </span>
+        <div className="flex items-center gap-3">
+          {!user && (
+            <button
+              onClick={() => onNav('login')}
+              className="text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl transition-colors shadow-sm"
+            >
+              Sign In / Register
+            </button>
+          )}
+          <span className="text-sm text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
+            Today
+          </span>
+        </div>
       </div>
 
       {/* Stat cards */}

@@ -36,6 +36,29 @@ export interface GoalItem {
   progressPercent: number;
 }
 
+export interface CommitmentItem {
+  id: string;
+  userId?: string;
+  name: string;
+  amount: number;
+  currency?: string;
+  category: string;
+  frequency: 'Weekly' | 'Monthly' | 'Quarterly' | 'Yearly' | 'One-Time';
+  type: 'recurring' | 'emi' | 'manual';
+  status: 'upcoming' | 'paid' | 'overdue' | 'needs_confirmation';
+  dueDate?: string;
+  nextExpectedDate?: string;
+  lastPaidDate?: string;
+  source: 'transaction_history' | 'manual' | 'user_confirmed';
+  sourceTransactionId?: string;
+  confidence?: 'high' | 'medium' | 'low';
+  isConfirmed: boolean;
+  notes?: string;
+  emoji?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UserProfile {
   name: string;
   email: string;
@@ -68,6 +91,7 @@ class DataStoreManager {
         transactions: [],
         budgets: [],
         goals: [],
+        commitments: [],
       };
       localStorage.setItem(key, JSON.stringify(initial));
     } else if (name) {
@@ -111,10 +135,13 @@ class DataStoreManager {
         transactions: [] as TransactionItem[],
         budgets: [] as BudgetItem[],
         goals: [] as GoalItem[],
+        commitments: [] as CommitmentItem[],
       };
     }
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (!parsed.commitments) parsed.commitments = [];
+      return parsed;
     } catch {
       return {
         profile: {
@@ -128,6 +155,7 @@ class DataStoreManager {
         transactions: [],
         budgets: [],
         goals: [],
+        commitments: [],
       };
     }
   }
@@ -703,17 +731,113 @@ class DataStoreManager {
     };
   }
 
+  // --- COMMITMENTS & BILLS ---
+  public getCommitments(): CommitmentItem[] {
+    const data = this.getData();
+    return data.commitments || [];
+  }
+
+  public addCommitment(c: Omit<CommitmentItem, 'id' | 'createdAt' | 'updatedAt'>): CommitmentItem {
+    const data = this.getData();
+    const commitments: CommitmentItem[] = data.commitments || [];
+    const now = new Date().toISOString();
+
+    const newCommitment: CommitmentItem = {
+      id: `com_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      name: c.name,
+      amount: Number(c.amount),
+      currency: c.currency || 'INR',
+      category: c.category || 'Subscriptions',
+      frequency: c.frequency || 'Monthly',
+      type: c.type || 'manual',
+      status: c.status || 'upcoming',
+      dueDate: c.dueDate || new Date().toISOString().split('T')[0],
+      nextExpectedDate: c.nextExpectedDate || c.dueDate || new Date().toISOString().split('T')[0],
+      lastPaidDate: c.lastPaidDate,
+      source: c.source || 'manual',
+      sourceTransactionId: c.sourceTransactionId,
+      confidence: c.confidence || 'high',
+      isConfirmed: Boolean(c.isConfirmed),
+      notes: c.notes || '',
+      emoji: c.emoji || '📄',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    commitments.unshift(newCommitment);
+    data.commitments = commitments;
+    this.saveData(data);
+
+    // Sync with backend API
+    api.bills.create({
+      name: newCommitment.name,
+      amount: newCommitment.amount,
+      dueDate: newCommitment.dueDate || newCommitment.nextExpectedDate,
+      status: newCommitment.status,
+      emoji: newCommitment.emoji,
+      recurring: newCommitment.frequency !== 'One-Time',
+    }).catch(() => {});
+
+    return newCommitment;
+  }
+
+  public confirmCommitment(commitment: CommitmentItem): CommitmentItem {
+    const data = this.getData();
+    const commitments: CommitmentItem[] = data.commitments || [];
+    const idx = commitments.findIndex(c => c.id === commitment.id);
+
+    const updated: CommitmentItem = {
+      ...commitment,
+      isConfirmed: true,
+      source: 'user_confirmed',
+      status: 'upcoming',
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (idx !== -1) {
+      commitments[idx] = updated;
+    } else {
+      commitments.unshift(updated);
+    }
+
+    data.commitments = commitments;
+    this.saveData(data);
+
+    api.bills.create({
+      name: updated.name,
+      amount: updated.amount,
+      dueDate: updated.dueDate || updated.nextExpectedDate,
+      status: 'upcoming',
+      emoji: updated.emoji,
+      recurring: true,
+    }).catch(() => {});
+
+    return updated;
+  }
+
+  public deleteCommitment(id: string) {
+    const data = this.getData();
+    const commitments: CommitmentItem[] = data.commitments || [];
+    data.commitments = commitments.filter(c => c.id !== id);
+    this.saveData(data);
+
+    if (!id.startsWith('com_') && !id.startsWith('det_')) {
+      api.bills.delete(id).catch(() => {});
+    }
+  }
+
   // --- SYNC WITH BACKEND API ---
   public async syncWithBackend() {
     try {
       const token = localStorage.getItem('moneymate_token');
       if (!token) return;
 
-      const [sumRes, txRes, budgetRes, goalRes, meRes] = await Promise.all([
+      const [sumRes, txRes, budgetRes, goalRes, billRes, meRes] = await Promise.all([
         api.analytics.getSummary().catch(() => null),
         api.transactions.getAll().catch(() => null),
         api.budgets.getAll().catch(() => null),
         api.goals.getAll().catch(() => null),
+        api.bills.getAll().catch(() => null),
         api.auth.getMe().catch(() => null),
       ]);
 
@@ -762,6 +886,31 @@ class DataStoreManager {
       // Sync goals
       if (goalRes && goalRes.success && Array.isArray(goalRes.goals) && goalRes.goals.length > 0) {
         data.goals = goalRes.goals;
+      }
+
+      // Sync bills
+      if (billRes && billRes.success && Array.isArray(billRes.bills) && billRes.bills.length > 0) {
+        const remoteCommitments: CommitmentItem[] = billRes.bills.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          amount: b.amount,
+          currency: 'INR',
+          category: 'Bills & Subscriptions',
+          frequency: b.recurring ? 'Monthly' : 'One-Time',
+          type: b.name.toLowerCase().includes('emi') || b.name.toLowerCase().includes('loan') ? 'emi' : 'manual',
+          status: b.status || 'upcoming',
+          dueDate: b.dueDate,
+          nextExpectedDate: b.dueDate,
+          source: 'manual',
+          isConfirmed: true,
+          emoji: b.emoji || '📄',
+          createdAt: b.createdAt || new Date().toISOString(),
+          updatedAt: b.updatedAt || new Date().toISOString(),
+        }));
+        const localCommitments: CommitmentItem[] = data.commitments || [];
+        const mergedMap = new Map<string, CommitmentItem>();
+        [...remoteCommitments, ...localCommitments].forEach(c => mergedMap.set(c.id, c));
+        data.commitments = Array.from(mergedMap.values());
       }
 
       this.saveData(data);

@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ArrowLeftRight, PieChart, Sparkles, Target,
   Scan, MessageSquare, BookOpen, Settings, TrendingUp, Heart, LogOut,
   BarChart2, Globe, Activity, Lightbulb,
-  Clock, Shield, Users, FileSpreadsheet,
+  Clock, Shield, Users, FileSpreadsheet, Receipt,
 } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
@@ -15,6 +15,7 @@ const sections = [
       { icon: ArrowLeftRight,  label: 'Transactions',  page: 'transactions' as Page },
       { icon: PieChart,        label: 'Budget',         page: 'budget' as Page },
       { icon: Target,          label: 'Goals',          page: 'goals' as Page },
+      { icon: Receipt,         label: 'Bills & Commitments', page: 'bills-commitments' as Page },
     ],
   },
   {

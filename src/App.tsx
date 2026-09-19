@@ -26,6 +26,7 @@ import FinancialHealth from './pages/FinancialHealth'
 import AIDashboard from './pages/AIDashboard'
 import TimeMachine from './pages/TimeMachine'
 import SafetyNet from './pages/SafetyNet'
+import BillsCommitments from './pages/BillsCommitments'
 import JuniorDashboard from './pages/junior/JuniorDashboard'
 import JuniorGoals from './pages/junior/JuniorGoals'
 import JuniorQuests from './pages/junior/JuniorQuests'
@@ -124,6 +125,7 @@ export default function App() {
       {page === 'ai-dashboard' && <AIDashboard />}
       {page === 'time-machine' && <TimeMachine />}
       {page === 'safety-net' && <SafetyNet />}
+      {(page === 'bills-commitments' || page === 'bills') && <BillsCommitments onNav={nav} />}
 
       {/* Interactive Modals Triggered Globally from Sidebar or Transactions Page */}
       <ReceiptImportModal

@@ -23,6 +23,8 @@ export type Page =
   | 'ai-dashboard'
   | 'time-machine'
   | 'safety-net'
+  | 'bills-commitments'
+  | 'bills'
   | 'junior-dashboard'
   | 'junior-goals'
   | 'junior-quests'

@@ -86,7 +86,7 @@ export default function Sidebar({ currentPage, onNav, user, onLogout }: SidebarP
             <TrendingUp size={16} className="text-white" />
           </div>
           <div className="text-left">
-            <p className="font-bold text-slate-900 dark:text-white text-sm leading-tight">Finshpere</p>
+            <p className="font-bold text-slate-900 dark:text-white text-sm leading-tight">MoneyMate</p>
             <p className="text-xs text-emerald-500 font-medium">Finance Copilot</p>
           </div>
         </button>

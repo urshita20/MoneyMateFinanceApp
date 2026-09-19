@@ -162,14 +162,80 @@ class DataStoreManager {
     this.saveData(data);
   }
 
+  private deduplicateTransactions(transactions: TransactionItem[]): TransactionItem[] {
+    if (!Array.isArray(transactions) || transactions.length === 0) return [];
+
+    const map = new Map<string, TransactionItem>();
+    const result: TransactionItem[] = [];
+
+    for (const tx of transactions) {
+      if (!tx) continue;
+      // Skip exact ID matches
+      if (result.some(t => t.id === tx.id)) continue;
+
+      const normMerchant = (tx.merchant || '').toLowerCase().trim();
+      const normCategory = (tx.category || '').toLowerCase().trim();
+      const dateStr = (tx.date || '').split('T')[0];
+      const amountNum = Number(tx.amount || 0);
+      const typeStr = tx.type || 'expense';
+
+      const sigKey = `${normMerchant}_${amountNum.toFixed(2)}_${normCategory}_${typeStr}_${dateStr}`;
+
+      if (!map.has(sigKey)) {
+        map.set(sigKey, tx);
+        result.push(tx);
+      } else {
+        const existing = map.get(sigKey)!;
+        // Prefer remote GUID id over temporary local id (tx_...)
+        if (existing.id.startsWith('tx_') && !tx.id.startsWith('tx_')) {
+          const idx = result.findIndex(t => t.id === existing.id);
+          if (idx !== -1) {
+            result[idx] = tx;
+          }
+          map.set(sigKey, tx);
+        }
+      }
+    }
+
+    return result;
+  }
+
   // --- TRANSACTIONS ---
   public getTransactions(): TransactionItem[] {
     const data = this.getData();
-    return data.transactions || [];
+    const rawTxs = data.transactions || [];
+    const deduped = this.deduplicateTransactions(rawTxs);
+    if (deduped.length !== rawTxs.length) {
+      data.transactions = deduped;
+      this.saveData(data);
+    }
+    return deduped;
   }
 
   public addTransaction(tx: Omit<TransactionItem, 'id' | 'createdAt'>): TransactionItem {
     const data = this.getData();
+    const existingTxs: TransactionItem[] = data.transactions || [];
+
+    const normMerchant = (tx.merchant || '').toLowerCase().trim();
+    const normCategory = (tx.category || '').toLowerCase().trim();
+    const dateStr = (tx.date || '').split('T')[0];
+    const amountNum = Number(tx.amount || 0);
+    const typeStr = tx.type || 'expense';
+    const sigKey = `${normMerchant}_${amountNum.toFixed(2)}_${normCategory}_${typeStr}_${dateStr}`;
+
+    const duplicate = existingTxs.find(existing => {
+      const eMerchant = (existing.merchant || '').toLowerCase().trim();
+      const eCategory = (existing.category || '').toLowerCase().trim();
+      const eDate = (existing.date || '').split('T')[0];
+      const eAmount = Number(existing.amount || 0);
+      const eType = existing.type || 'expense';
+      return `${eMerchant}_${eAmount.toFixed(2)}_${eCategory}_${eType}_${eDate}` === sigKey;
+    });
+
+    if (duplicate) {
+      return duplicate;
+    }
+
     const newTx: TransactionItem = {
       id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
       merchant: tx.merchant,
@@ -183,7 +249,7 @@ class DataStoreManager {
       createdAt: new Date().toISOString(),
     };
 
-    data.transactions = [newTx, ...(data.transactions || [])];
+    data.transactions = [newTx, ...existingTxs];
 
     // Update spentAmount on category budget if expense
     if (newTx.type === 'expense' && data.budgets) {
@@ -399,32 +465,21 @@ class DataStoreManager {
       }
 
       // Sync backend transactions into local store
-      if (txRes && txRes.success && Array.isArray(txRes.transactions) && txRes.transactions.length > 0) {
+      if (txRes && txRes.success && Array.isArray(txRes.transactions)) {
         const localTxs: TransactionItem[] = data.transactions || [];
-        const localIds = new Set(localTxs.map(t => t.id));
-
-        for (const remoteTx of txRes.transactions) {
-          if (!localIds.has(remoteTx.id)) {
-            localTxs.push({
-              id: remoteTx.id,
-              merchant: remoteTx.merchant,
-              amount: remoteTx.amount,
-              category: remoteTx.category,
-              type: remoteTx.type || 'expense',
-              emoji: remoteTx.emoji || '💸',
-              date: remoteTx.date || new Date().toISOString().split('T')[0],
-              description: remoteTx.description || '',
-              paymentMethod: remoteTx.paymentMethod || 'UPI',
-              createdAt: remoteTx.createdAt || new Date().toISOString(),
-            });
-          }
-        }
-        data.transactions = localTxs;
-      } else if ((data.transactions || []).length > 0) {
-        // Push local transactions to backend if backend lost them
-        for (const localTx of data.transactions) {
-          api.transactions.create(localTx).catch(() => {});
-        }
+        const normalizedRemote = txRes.transactions.map((remoteTx: any) => ({
+          id: remoteTx.id,
+          merchant: remoteTx.merchant,
+          amount: remoteTx.amount,
+          category: remoteTx.category,
+          type: remoteTx.type || 'expense',
+          emoji: remoteTx.emoji || '💸',
+          date: remoteTx.date || new Date().toISOString().split('T')[0],
+          description: remoteTx.description || '',
+          paymentMethod: remoteTx.paymentMethod || 'UPI',
+          createdAt: remoteTx.createdAt || new Date().toISOString(),
+        }));
+        data.transactions = this.deduplicateTransactions([...normalizedRemote, ...localTxs]);
       }
 
       // Sync budgets

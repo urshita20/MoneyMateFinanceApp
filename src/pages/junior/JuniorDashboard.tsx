@@ -7,21 +7,23 @@ export default function JuniorDashboard() {
   const [showSetupModal, setShowSetupModal] = useState(!juniorStore.getData().hasCompletedSetup)
   const [showAddAllowanceModal, setShowAddAllowanceModal] = useState(false)
   const [allowanceInput, setAllowanceInput] = useState('')
+  const [allowancePinInput, setAllowancePinInput] = useState('')
+  const [allowancePinError, setAllowancePinError] = useState('')
 
   // Onboarding Form State
   const [setupForm, setSetupForm] = useState({
-    childName: '',
-    childAge: 10,
-    allowanceAmount: 500,
-    allowanceFrequency: 'Weekly' as 'Weekly' | 'Monthly' | 'Custom',
-    spendStart: 200,
-    saveStart: 300,
-    giveStart: 50,
-    spendPct: 50,
-    savePct: 35,
-    givePct: 15,
-    pin: '',
-    confirmPin: '',
+    childName: data.profile?.childName || '',
+    childAge: data.profile?.childAge || 10,
+    allowanceAmount: data.profile?.allowanceAmount || 1000,
+    allowanceFrequency: 'Monthly' as 'Weekly' | 'Monthly' | 'Custom',
+    spendStart: 500,
+    saveStart: 350,
+    giveStart: 150,
+    spendPct: data.jarAllocation?.spendPct || 50,
+    savePct: data.jarAllocation?.savePct || 35,
+    givePct: data.jarAllocation?.givePct || 15,
+    pin: data.profile?.parentPin || '',
+    confirmPin: data.profile?.parentPin || '',
   })
   const [setupError, setSetupError] = useState('')
 
@@ -61,6 +63,26 @@ export default function JuniorDashboard() {
   const saveJarSplit = () => {
     juniorStore.updateJarAllocations(jarValues.spend, jarValues.save, jarValues.give)
     alert('Jar split saved successfully!')
+  }
+
+  const openSetupModal = () => {
+    const current = juniorStore.getData()
+    setSetupForm({
+      childName: current.profile?.childName || '',
+      childAge: current.profile?.childAge || 10,
+      allowanceAmount: current.profile?.allowanceAmount || 1000,
+      allowanceFrequency: 'Monthly',
+      spendStart: current.balances.spend,
+      saveStart: current.balances.save,
+      giveStart: current.balances.give,
+      spendPct: current.jarAllocation.spendPct,
+      savePct: current.jarAllocation.savePct,
+      givePct: current.jarAllocation.givePct,
+      pin: current.profile?.parentPin || '',
+      confirmPin: current.profile?.parentPin || '',
+    })
+    setSetupError('')
+    setShowSetupModal(true)
   }
 
   const handleSetupSubmit = (e: React.FormEvent) => {
@@ -109,13 +131,26 @@ export default function JuniorDashboard() {
     setSetupError('')
   }
 
-
   const handleDepositAllowance = () => {
+    setAllowancePinError('')
+    if (!allowancePinInput.trim()) {
+      setAllowancePinError('Please enter your 4-digit Parent PIN')
+      return
+    }
+    if (!juniorStore.verifyParentPin(allowancePinInput)) {
+      setAllowancePinError('Incorrect Parent PIN. Only parent can deposit allowance.')
+      return
+    }
+
     const amt = Number(allowanceInput) || data.profile.allowanceAmount
     if (amt > 0) {
       juniorStore.depositAllowance(amt)
       setShowAddAllowanceModal(false)
       setAllowanceInput('')
+      setAllowancePinInput('')
+      setAllowancePinError('')
+    } else {
+      setAllowancePinError('Please enter a valid allowance amount.')
     }
   }
 
@@ -282,39 +317,70 @@ export default function JuniorDashboard() {
         </div>
       </div>
 
-      {/* Manual Allowance Modal */}
+      {/* Manual Allowance Modal - Requires Parent PIN */}
       {showAddAllowanceModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
-            <h3 className="font-bold text-slate-900 text-base">Deposit Allowance</h3>
-            <p className="text-xs text-slate-400">Add allowance money to be split according to the 3-jar allocation.</p>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+            <div className="flex items-center gap-2 border-b pb-3 border-slate-100">
+              <Shield size={18} className="text-amber-500" />
+              <h3 className="font-bold text-slate-900 text-base">Parent Allowance Deposit</h3>
+            </div>
+            <p className="text-xs text-slate-500">Only parents can give allowance. Enter allowance amount and your Parent PIN.</p>
+            
+            {allowancePinError && (
+              <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-600 text-xs font-semibold rounded-xl">
+                {allowancePinError}
+              </div>
+            )}
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Allowance Amount (₹)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+                <input
+                  type="number"
+                  placeholder={String(data.profile.allowanceAmount)}
+                  value={allowanceInput}
+                  onChange={e => setAllowanceInput(e.target.value)}
+                  className="w-full pl-7 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none font-bold"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">Parent 4-Digit PIN *</label>
               <input
-                type="number"
-                placeholder={String(data.profile.allowanceAmount)}
-                value={allowanceInput}
-                onChange={e => setAllowanceInput(e.target.value)}
-                className="w-full pl-7 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none"
+                type="password"
+                maxLength={4}
+                placeholder="• • • •"
+                value={allowancePinInput}
+                onChange={e => setAllowancePinInput(e.target.value)}
+                className="w-full px-3 py-2 text-base text-center tracking-widest font-bold border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-400 focus:outline-none"
               />
             </div>
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 pt-2">
               <button
-                onClick={() => setShowAddAllowanceModal(false)}
+                onClick={() => {
+                  setShowAddAllowanceModal(false)
+                  setAllowancePinError('')
+                  setAllowancePinInput('')
+                }}
                 className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl text-xs"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDepositAllowance}
-                className="flex-1 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl text-xs"
+                className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold rounded-xl text-xs shadow-md shadow-amber-500/20"
               >
-                Deposit Now
+                Deposit Allowance
               </button>
             </div>
           </div>
         </div>
       )}
+
 
       {/* 3-Jar allocation */}
       <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
@@ -379,7 +445,7 @@ export default function JuniorDashboard() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-slate-900 text-base">Recent Activity</h2>
           <button
-            onClick={() => setShowSetupModal(true)}
+            onClick={openSetupModal}
             className="text-xs text-slate-400 flex items-center gap-1 hover:text-slate-600"
           >
             <Settings size={12} /> Edit Profile Settings

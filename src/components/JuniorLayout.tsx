@@ -175,7 +175,7 @@ export default function JuniorLayout({ page, onNav, children }: JuniorLayoutProp
                   maxLength={6}
                   value={enteredPin}
                   onChange={e => setEnteredPin(e.target.value)}
-                  placeholder="Enter Parent PIN (Default 1234)"
+                  placeholder="Enter Parent PIN"
                   autoFocus
                   className="w-full text-center text-lg font-mono tracking-widest bg-slate-50 border border-slate-200 rounded-xl py-3 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-900"
                 />

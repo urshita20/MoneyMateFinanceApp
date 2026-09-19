@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TrendingUp, Lock, Users, ArrowRight, Star } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
+import juniorStore from '../services/juniorStore'
 
 interface ProfileSwitcherProps {
   onNav: (p: Page) => void
@@ -12,6 +13,7 @@ export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
   const [hoveredProfile, setHoveredProfile] = useState<'adult' | 'junior' | null>(null)
   const [pinModal, setPinModal] = useState(false)
   const [pin, setPin] = useState('')
+  const [pinError, setPinError] = useState('')
 
   const adultName = user?.name || 'Urshita Madaan'
   const adultInitial = adultName.charAt(0).toUpperCase()
@@ -22,6 +24,8 @@ export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
     } catch (e) {
       // ignore
     }
+    setPinError('')
+    setPin('')
     setPinModal(true)
   }
 
@@ -35,9 +39,15 @@ export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
   }
 
   const submitPin = () => {
-    setPinModal(false)
-    setPin('')
-    onNav('dashboard')
+    if (juniorStore.verifyParentPin(pin)) {
+      setPinModal(false)
+      setPin('')
+      setPinError('')
+      onNav('dashboard')
+    } else {
+      setPinError('Incorrect Parent PIN. Please try again.')
+      setPin('')
+    }
   }
 
   return (
@@ -151,8 +161,15 @@ export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
             <div className="w-14 h-14 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Lock size={22} className="text-amber-400" />
             </div>
-            <h2 className="text-white font-bold text-lg mb-1">Enter PIN</h2>
-            <p className="text-slate-400 text-sm mb-6">Workspace is PIN-protected (press any 4 numbers)</p>
+            <h2 className="text-white font-bold text-lg mb-1">Enter Parent PIN</h2>
+            <p className="text-slate-400 text-xs mb-4">Workspace is PIN-protected. Enter 4-digit Parent PIN.</p>
+
+            {pinError && (
+              <div className="mb-4 p-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-semibold rounded-xl">
+                {pinError}
+              </div>
+            )}
+
             <div className="flex justify-center gap-3 mb-6">
               {[0, 1, 2, 3].map(i => (
                 <div
@@ -169,11 +186,24 @@ export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
                   key={idx}
                   disabled={k === null}
                   onClick={() => {
+                    setPinError('')
                     if (k === 'del') setPin(p => p.slice(0, -1))
                     else if (k !== null && pin.length < 4) {
                       const next = pin + String(k)
                       setPin(next)
-                      if (next.length === 4) setTimeout(submitPin, 300)
+                      if (next.length === 4) {
+                        setTimeout(() => {
+                          if (juniorStore.verifyParentPin(next)) {
+                            setPinModal(false)
+                            setPin('')
+                            setPinError('')
+                            onNav('dashboard')
+                          } else {
+                            setPinError('Incorrect Parent PIN. Try again.')
+                            setPin('')
+                          }
+                        }, 200)
+                      }
                     }
                   }}
                   className={`h-12 rounded-xl text-sm font-semibold transition-colors ${
@@ -188,7 +218,7 @@ export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
                 </button>
               ))}
             </div>
-            <button onClick={() => { setPinModal(false); setPin('') }} className="text-xs text-slate-500 hover:text-slate-400">
+            <button onClick={() => { setPinModal(false); setPin(''); setPinError('') }} className="text-xs text-slate-500 hover:text-slate-400">
               Cancel
             </button>
           </div>

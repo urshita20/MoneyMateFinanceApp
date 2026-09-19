@@ -106,20 +106,22 @@ class JuniorStoreManager {
     if (raw) {
       try {
         const parsed = JSON.parse(raw)
+        const name = parsed.profile?.childName || parsed.childName || ''
+        const isSetupCompleted = Boolean(parsed.hasCompletedSetup) && Boolean(name) && name !== 'Junior Saver'
         return {
-          hasCompletedSetup: Boolean(parsed.hasCompletedSetup),
+          hasCompletedSetup: isSetupCompleted,
           profile: {
-            childName: parsed.profile?.childName || parsed.childName || 'Junior Saver',
+            childName: name,
             childAge: Number(parsed.profile?.childAge || parsed.childAge || 10),
-            allowanceAmount: Number(parsed.profile?.allowanceAmount || parsed.allowanceAmount || 500),
-            allowanceFrequency: parsed.profile?.allowanceFrequency || parsed.allowanceFrequency || 'Weekly',
+            allowanceAmount: Number(parsed.profile?.allowanceAmount || parsed.allowanceAmount || 1000),
+            allowanceFrequency: parsed.profile?.allowanceFrequency || parsed.allowanceFrequency || 'Monthly',
             parentPin: parsed.profile?.parentPin || parsed.parentPin || '1234',
-            xp: Number(parsed.profile?.xp ?? parsed.xp ?? 120),
+            xp: Number(parsed.profile?.xp ?? parsed.xp ?? 0),
           },
           balances: {
-            spend: Number(parsed.balances?.spend ?? parsed.spendBalance ?? 420),
-            save: Number(parsed.balances?.save ?? parsed.saveBalance ?? 1120),
-            give: Number(parsed.balances?.give ?? parsed.giveBalance ?? 300),
+            spend: Number(parsed.balances?.spend ?? parsed.spendBalance ?? 500),
+            save: Number(parsed.balances?.save ?? parsed.saveBalance ?? 350),
+            give: Number(parsed.balances?.give ?? parsed.giveBalance ?? 150),
           },
           jarAllocation: {
             spendPct: Number(parsed.jarAllocation?.spendPct ?? 50),
@@ -127,10 +129,10 @@ class JuniorStoreManager {
             givePct: Number(parsed.jarAllocation?.givePct ?? 15),
           },
           streaks: {
-            savingStreak: Number(parsed.streaks?.savingStreak ?? 21),
-            questStreak: Number(parsed.streaks?.questStreak ?? 12),
-            budgetWins: Number(parsed.streaks?.budgetWins ?? 2),
-            giveStreak: Number(parsed.streaks?.giveStreak ?? 4),
+            savingStreak: Number(parsed.streaks?.savingStreak ?? 0),
+            questStreak: Number(parsed.streaks?.questStreak ?? 0),
+            budgetWins: Number(parsed.streaks?.budgetWins ?? 0),
+            giveStreak: Number(parsed.streaks?.giveStreak ?? 0),
           },
           wishlist: Array.isArray(parsed.wishlist) ? parsed.wishlist.map((w: any) => ({
             id: String(w.id || Date.now()),

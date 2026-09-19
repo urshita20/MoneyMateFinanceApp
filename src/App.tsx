@@ -32,12 +32,17 @@ import JuniorQuests from './pages/junior/JuniorQuests'
 import JuniorBuySim from './pages/junior/JuniorBuySim'
 import JuniorStreaks from './pages/junior/JuniorStreaks'
 
+import ReceiptImportModal from './components/ReceiptImportModal'
+import BankStatementImportModal from './components/BankStatementImportModal'
+
 const juniorPages: Page[] = ['junior-dashboard', 'junior-goals', 'junior-quests', 'junior-buy-sim', 'junior-streaks']
 
 export default function App() {
   const [page, setPage] = useState<Page>('landing')
   const [dark, setDark] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false)
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -91,7 +96,16 @@ export default function App() {
   }
 
   return (
-    <Layout page={page} onNav={nav} dark={dark} onToggleDark={toggleDark} user={user} onLogout={handleLogout}>
+    <Layout
+      page={page}
+      onNav={nav}
+      dark={dark}
+      onToggleDark={toggleDark}
+      user={user}
+      onLogout={handleLogout}
+      onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
+      onOpenBankModal={() => setIsBankModalOpen(true)}
+    >
       {page === 'dashboard' && <Dashboard onNav={nav} user={user} />}
       {page === 'transactions' && <Transactions />}
       {page === 'budget' && <Budget />}
@@ -110,6 +124,23 @@ export default function App() {
       {page === 'ai-dashboard' && <AIDashboard />}
       {page === 'time-machine' && <TimeMachine />}
       {page === 'safety-net' && <SafetyNet />}
+
+      {/* Interactive Modals Triggered Globally from Sidebar or Transactions Page */}
+      <ReceiptImportModal
+        isOpen={isReceiptModalOpen}
+        onClose={() => setIsReceiptModalOpen(false)}
+        onImportComplete={() => {
+          dataStore.syncWithBackend()
+        }}
+      />
+
+      <BankStatementImportModal
+        isOpen={isBankModalOpen}
+        onClose={() => setIsBankModalOpen(false)}
+        onImportComplete={() => {
+          dataStore.syncWithBackend()
+        }}
+      />
     </Layout>
   )
 }

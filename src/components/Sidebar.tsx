@@ -64,9 +64,11 @@ interface SidebarProps {
   onNav: (p: Page) => void
   user?: any
   onLogout?: () => void
+  onOpenReceiptModal?: () => void
+  onOpenBankModal?: () => void
 }
 
-export default function Sidebar({ currentPage, onNav, user, onLogout }: SidebarProps) {
+export default function Sidebar({ currentPage, onNav, user, onLogout, onOpenReceiptModal, onOpenBankModal }: SidebarProps) {
   const userName = user?.name || 'Urshita Madaan'
   const userEmail = user?.email || 'urshita@gmail.com'
   const initial = userName.charAt(0).toUpperCase()
@@ -78,6 +80,18 @@ export default function Sidebar({ currentPage, onNav, user, onLogout }: SidebarP
       // ignore
     }
     onNav('junior-dashboard')
+  }
+
+  const handleItemClick = (page: Page) => {
+    if (page === 'ocr' && onOpenReceiptModal) {
+      onOpenReceiptModal()
+      return
+    }
+    if (page === 'bank-statement' && onOpenBankModal) {
+      onOpenBankModal()
+      return
+    }
+    onNav(page)
   }
 
   return (
@@ -108,7 +122,7 @@ export default function Sidebar({ currentPage, onNav, user, onLogout }: SidebarP
                 return (
                   <button
                     key={item.page}
-                    onClick={() => onNav(item.page)}
+                    onClick={() => handleItemClick(item.page)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                       active
                         ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'

@@ -81,13 +81,17 @@ export default function ReceiptImportModal({ isOpen, onClose, onImportComplete }
         const text = ret.data.text || ''
         setProcessingStatus('Parsing merchant, amount, and date details...')
 
-        // Parse Merchant name (first non-empty line)
+        // Parse Merchant name (first clean non-header line)
         const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
-        let merchantName = lines[0] || 'Store Receipt'
+        let merchantName = 'Store Receipt'
 
-        // Clean common receipt header words
-        if (/tax|invoice|bill|receipt|total|welcome|thank/i.test(merchantName) && lines.length > 1) {
-          merchantName = lines[1]
+        const ignoreHeaderRegex = /tax\s*invoice|cash\s*memo|receipt|welcome|thank\s*you|bill\s*no|original|duplicate|gstin|tin\b|cin\b|customer\s*copy|token\s*no/i
+        for (const l of lines.slice(0, 6)) {
+          const cleanedLine = l.replace(/^(welcome to|welcome|thank you for visiting|store|branch)\s*/i, '').trim()
+          if (cleanedLine.length >= 3 && !ignoreHeaderRegex.test(cleanedLine) && !/^\d+$/.test(cleanedLine)) {
+            merchantName = cleanedLine
+            break
+          }
         }
 
         // Parse Amount using robust multi-pass extraction

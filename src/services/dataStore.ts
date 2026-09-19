@@ -272,22 +272,24 @@ class DataStoreManager {
   public extractOcrAmount(rawText: string): string {
     if (!rawText) return '';
 
-    // Normalize OCR text: fix common OCR character misreadings (.OO -> .00, .Oo -> .00)
+    // Normalize OCR text: fix common OCR character misreadings (.OO -> .00, .Oo -> .00, l50 -> 150)
     let text = rawText
       .replace(/(\d+)\s*\.\s*([OoSs0-9]{2})/g, (m, g1, g2) => {
         const cleanG2 = g2.replace(/[OoSs]/g, '0');
         return `${g1}.${cleanG2}`;
       })
+      .replace(/\b[lI](\d+[\.\,]\d+)\b/g, '1$1')
+      .replace(/\b(\d+[\.\,])[lI]\b/g, '$10')
       .replace(/([0-9]+)\s*\/[-=]/g, '$1');
 
     const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
     // High Priority Keywords (grand totals / bill amounts / total due)
     const totalKeywords = [
+      /grand\s+total/i,
       /total\s+due/i,
       /bill\s+amt/i,
       /bill\s+amount/i,
-      /grand\s+total/i,
       /total\s+amount/i,
       /net\s+amount/i,
       /net\s+payable/i,
@@ -304,6 +306,11 @@ class DataStoreManager {
     ];
 
     const extractNumbersFromLine = (line: string): number[] => {
+      // Ignore lines with GSTIN, CIN, Phone, Mobile, or PIN Code
+      if (/gstin|cin\b|fssai|phone|mobile|tel\b|pin\s*code|account|acc\s*no/i.test(line)) {
+        return [];
+      }
+
       const matches = line.match(/(?:₹|rs\.?|inr)?\s*([0-9,]+\.?[0-9]*)/gi);
       if (!matches) return [];
 
@@ -312,9 +319,11 @@ class DataStoreManager {
         const clean = m.replace(/[^0-9.]/g, '');
         if (!clean) continue;
         const val = parseFloat(clean);
-        if (!isNaN(val) && val > 0 && val < 5000000) {
+        if (!isNaN(val) && val > 0 && val < 500000) {
           // Ignore 4-digit years like 2024, 2025, 2026 if integer without decimal
-          if (val >= 2024 && val <= 2030 && !clean.includes('.')) continue;
+          if (val >= 2020 && val <= 2030 && !clean.includes('.')) continue;
+          // Ignore 6-digit PIN codes or reference numbers without decimals
+          if (val >= 100000 && val <= 999999 && !clean.includes('.')) continue;
           numbers.push(val);
         }
       }
@@ -328,7 +337,7 @@ class DataStoreManager {
         if (kw.test(line)) {
           const nums = extractNumbersFromLine(line);
           if (nums.length > 0) {
-            // Take the MAX positive number on this total line (avoiding 0.00 or smaller sub-items)
+            // Take the MAX positive number on this total line
             const maxVal = Math.max(...nums);
             if (maxVal > 0) {
               return maxVal.toString();
@@ -338,7 +347,26 @@ class DataStoreManager {
       }
     }
 
-    // 2. Global scan across all lines for numbers
+    // 2. Scan for explicit 2-decimal numbers across lines (e.g. 150.00)
+    const decimalNumbers: number[] = [];
+    for (const line of lines) {
+      if (/gstin|cin\b|fssai|phone|mobile|tel\b|pin\s*code/i.test(line)) continue;
+      const matches = line.match(/(?:₹|rs\.?|inr)?\s*([0-9,]+\.[0-9]{2})/gi);
+      if (matches) {
+        for (const m of matches) {
+          const val = parseFloat(m.replace(/[^0-9.]/g, ''));
+          if (!isNaN(val) && val > 0 && val < 500000) {
+            decimalNumbers.push(val);
+          }
+        }
+      }
+    }
+
+    if (decimalNumbers.length > 0) {
+      return Math.max(...decimalNumbers).toString();
+    }
+
+    // 3. Global scan across all lines for any valid numbers
     const allValidNumbers: number[] = [];
     for (const line of lines) {
       const nums = extractNumbersFromLine(line);

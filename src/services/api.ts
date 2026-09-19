@@ -49,7 +49,11 @@ export const api = {
       });
       return res.json();
     },
+    switchProfile: async (profile: 'adult' | 'junior') => {
+      return { success: true, profile };
+    },
   },
+
 
   // Analytics API
   analytics: {

@@ -9,6 +9,21 @@ interface AuthProps {
   onAuthSuccess?: (user: any) => void
 }
 
+function formatErrorMessage(msg: string): string {
+  if (!msg) return '';
+  try {
+    if (msg.trim().startsWith('[')) {
+      const parsed = JSON.parse(msg);
+      if (Array.isArray(parsed)) {
+        return parsed.map((e: any) => e.message || e.code).join('. ');
+      }
+    }
+  } catch (e) {
+    // ignore parse error
+  }
+  return msg;
+}
+
 export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initial)
   const [showPass, setShowPass] = useState(false)
@@ -153,17 +168,21 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
 
               {errorMsg && (
                 <div className="mb-4 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-medium">
-                  {errorMsg}
+                  {formatErrorMessage(errorMsg)}
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === 'signup' && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Full Name</label>
+                      <span className="text-[11px] text-slate-400">Min 2 characters</span>
+                    </div>
                     <input
                       type="text"
-                      placeholder="Alex Johnson"
+                      minLength={2}
+                      placeholder="Urshita Madaan"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       required
@@ -176,7 +195,7 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email address</label>
                   <input
                     type="email"
-                    placeholder="alex@example.com"
+                    placeholder="urshita@gmail.com"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     required
@@ -185,10 +204,14 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                    <span className="text-[11px] text-slate-400">Min 6 characters</span>
+                  </div>
                   <div className="relative">
                     <input
                       type={showPass ? 'text' : 'password'}
+                      minLength={6}
                       placeholder="••••••••"
                       value={form.password}
                       onChange={e => setForm(f => ({ ...f, password: e.target.value }))}

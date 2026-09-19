@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff, TrendingUp, ArrowRight, Github } from 'lucide-react'
+import { Eye, EyeOff, TrendingUp, ArrowRight, ShieldCheck, BarChart3, Bot } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
 
@@ -82,57 +82,47 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
 
         {/* Logo */}
         <div className="relative flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
             <TrendingUp size={18} className="text-white" />
           </div>
           <div>
-            <p className="font-bold text-white">Finshpere</p>
-            <p className="text-xs text-emerald-400">AI Finance Copilot</p>
+            <p className="font-bold text-white text-lg">MoneyMate</p>
+            <p className="text-xs text-emerald-400">Personal Finance Copilot</p>
           </div>
         </div>
 
         {/* Center content */}
-        <div className="relative">
-          <h2 className="text-4xl font-bold text-white mb-4 leading-tight">
+        <div className="relative space-y-6">
+          <h2 className="text-4xl font-bold text-white leading-tight">
             Take control of
             <br />
-            <span className="text-emerald-400">your finances</span>
+            <span className="text-emerald-400">your real finances</span>
           </h2>
-          <p className="text-slate-400 text-base leading-relaxed mb-8 max-w-sm">
-            Join 2 lakh+ Indians who use Finshpere to track expenses, get AI insights, and achieve their financial
-            goals.
+          <p className="text-slate-400 text-base leading-relaxed max-w-sm">
+            Track expenses, scan receipt bills with real OCR, monitor spending budgets, and build custom financial goals.
           </p>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Real Feature Highlights */}
+          <div className="space-y-3 pt-2">
             {[
-              { value: '₹500Cr+', label: 'Tracked' },
-              { value: '2L+', label: 'Users' },
-              { value: '4.9★', label: 'Rating' },
-            ].map(s => (
-              <div key={s.label} className="bg-white/5 rounded-xl p-3 border border-white/10">
-                <p className="text-lg font-bold text-white">{s.value}</p>
-                <p className="text-xs text-slate-400">{s.label}</p>
+              { icon: ShieldCheck, title: '100% Private & Persistent', desc: 'Stored securely in your private account' },
+              { icon: BarChart3, title: 'Real-Time Calculations', desc: 'No dummy values or hardcoded estimates' },
+              { icon: Bot, title: 'Smart OCR Bill Scanner', desc: 'Scan receipts and verify expense details' },
+            ].map((f, i) => (
+              <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl p-3.5">
+                <f.icon size={20} className="text-emerald-400 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-white">{f.title}</p>
+                  <p className="text-xs text-slate-400">{f.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Testimonial */}
-        <div className="relative bg-white/5 border border-white/10 rounded-2xl p-5">
-          <p className="text-slate-300 text-sm italic leading-relaxed mb-3">
-            "Finshpere's AI insights helped me save ₹15,000 extra every month. My financial health score went from 52
-            to 87 in 4 months."
-          </p>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold">
-              AP
-            </div>
-            <div>
-              <p className="text-sm font-medium text-white">Ananya Patel</p>
-              <p className="text-xs text-slate-400">Product Manager, Hyderabad</p>
-            </div>
-          </div>
+        {/* Footer info */}
+        <div className="relative text-xs text-slate-500">
+          © 2026 MoneyMate Finance Application. All rights reserved.
         </div>
       </div>
 
@@ -144,7 +134,7 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
             <div className="w-8 h-8 bg-emerald-500 rounded-xl flex items-center justify-center">
               <TrendingUp size={14} className="text-white" />
             </div>
-            <span className="font-bold text-slate-900 dark:text-white">Finshpere</span>
+            <span className="font-bold text-slate-900 dark:text-white">MoneyMate</span>
           </div>
 
           {forgotPass ? (
@@ -182,7 +172,7 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
                     <input
                       type="text"
                       minLength={2}
-                      placeholder="Urshita Madaan"
+                      placeholder="Your Full Name"
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                       required
@@ -195,7 +185,7 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Email address</label>
                   <input
                     type="email"
-                    placeholder="urshita@gmail.com"
+                    placeholder="user@example.com"
                     value={form.email}
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     required
@@ -300,7 +290,7 @@ function ForgotPassword({ onBack }: { onBack: () => void }) {
         <div className="space-y-4">
           <input
             type="email"
-            placeholder="arjun@gmail.com"
+            placeholder="user@example.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
             className="w-full px-4 py-2.5 text-sm bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"

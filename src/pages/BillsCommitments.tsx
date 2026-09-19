@@ -114,32 +114,38 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const activeCommitments = allCommitments.filter(c => c.status !== 'paid');
+  const safeAllCommitments = Array.isArray(allCommitments) ? allCommitments.filter(Boolean) : [];
+  const activeCommitments = safeAllCommitments.filter(c => c.status !== 'paid');
 
   // A. Upcoming This Month
   const thisMonthCommitments = activeCommitments.filter(c => {
     if (!c.nextExpectedDate && !c.dueDate) return false;
-    const d = new Date(c.nextExpectedDate || c.dueDate || '');
+    const dateStr = c.nextExpectedDate || c.dueDate || '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
-  const upcomingThisMonthTotal = thisMonthCommitments.reduce((sum, c) => sum + c.amount, 0);
+  const upcomingThisMonthTotal = thisMonthCommitments.reduce((sum, c) => sum + (c.amount || 0), 0);
 
   // B. Recurring Payments Count
-  const recurringCount = allCommitments.filter(c => c.type === 'recurring' || c.frequency !== 'One-Time').length;
+  const recurringCount = safeAllCommitments.filter(c => c.type === 'recurring' || c.frequency !== 'One-Time').length;
 
   // C. EMIs Count
-  const emiCount = allCommitments.filter(c => c.type === 'emi' || c.isConfirmed && c.category === 'Loans & EMIs').length;
+  const emiCount = safeAllCommitments.filter(c => c.type === 'emi' || (c.isConfirmed && c.category === 'Loans & EMIs')).length;
 
   // D. Next Payment
   const sortedUpcoming = [...activeCommitments].sort((a, b) => {
     const dA = new Date(a.nextExpectedDate || a.dueDate || '2099-12-31').getTime();
     const dB = new Date(b.nextExpectedDate || b.dueDate || '2099-12-31').getTime();
-    return dA - dB;
+    const timeA = isNaN(dA) ? 9999999999999 : dA;
+    const timeB = isNaN(dB) ? 9999999999999 : dB;
+    return timeA - timeB;
   });
   const nextPayment = sortedUpcoming.length > 0 ? sortedUpcoming[0] : null;
 
   // Filtered List
-  const filteredCommitments = allCommitments.filter(c => {
+  const filteredCommitments = safeAllCommitments.filter(c => {
+    if (!c) return false;
     if (activeTab === 'upcoming' && c.status === 'paid') return false;
     if (activeTab === 'recurring' && c.type !== 'recurring') return false;
     if (activeTab === 'emi' && c.type !== 'emi' && c.category !== 'Loans & EMIs') return false;
@@ -147,9 +153,9 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       return (
-        c.name.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q) ||
-        c.amount.toString().includes(q)
+        (c.name || '').toLowerCase().includes(q) ||
+        (c.category || '').toLowerCase().includes(q) ||
+        (c.amount || '').toString().includes(q)
       );
     }
     return true;

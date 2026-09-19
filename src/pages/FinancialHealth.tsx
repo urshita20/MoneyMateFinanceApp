@@ -43,13 +43,10 @@ export default function FinancialHealth({ onNav }: FinancialHealthProps) {
     setSummaryData(local.summary)
     setLoading(false)
 
-    api.analytics.getSummary()
-      .then(res => {
-        if (res.success && res.summary) {
-          setSummaryData(res.summary)
-        }
-      })
-      .catch(console.warn)
+    dataStore.syncWithBackend().then(() => {
+      const updatedLocal = dataStore.getDashboardSummary()
+      setSummaryData(updatedLocal.summary)
+    }).catch(console.warn)
   }
 
   useEffect(() => {
@@ -102,28 +99,10 @@ export default function FinancialHealth({ onNav }: FinancialHealthProps) {
   const overspendingStatus = overspentEvents === 0 ? 'Low' : overspentEvents === 1 ? 'Moderate' : 'High'
   const consistencyStatus = uniqueCategoriesCount >= 3 ? 'Balanced' : txList.length > 0 ? 'Moderate' : 'Building'
 
-  // Calculated Score
-  let calculatedScore = 70
-  if (summaryData?.healthScore !== null && summaryData?.healthScore !== undefined) {
-    calculatedScore = summaryData.healthScore
-  } else {
-    let pts = 0
-    let maxPts = 0
-
-    if (totalIncome > 0) {
-      maxPts += 30
-      pts += Math.min(30, Math.round(savingRatePct * 0.5))
-    }
-    if (monthlyBudget > 0) {
-      maxPts += 30
-      pts += budgetUsedPct <= 80 ? 30 : budgetUsedPct <= 100 ? 22 : 10
-    }
-    maxPts += 20 + 20
-    pts += Math.max(5, 20 - (overspentEvents * 5))
-    pts += Math.min(20, Math.max(5, uniqueCategoriesCount * 4))
-
-    calculatedScore = maxPts > 0 ? Math.min(100, Math.round((pts / maxPts) * 100)) : 70
-  }
+  // Calculated Score - strictly unified with Dashboard & dataStore
+  const calculatedScore = (summaryData?.healthScore !== null && summaryData?.healthScore !== undefined)
+    ? summaryData.healthScore
+    : 70
 
   const isEarlyEstimate = txList.length < 5
   const coverageText = isEarlyEstimate

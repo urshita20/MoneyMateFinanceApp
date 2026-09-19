@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import { Upload, Scan, X, CheckCircle } from 'lucide-react'
 import type { Page } from '../types'
+import { api } from '../services/api'
 
 const categories = [
-  { id: 'food', label: 'Food', emoji: '🍕' },
-  { id: 'transport', label: 'Transport', emoji: '🚗' },
-  { id: 'shopping', label: 'Shopping', emoji: '🛍️' },
-  { id: 'entertainment', label: 'Entertainment', emoji: '🎬' },
-  { id: 'health', label: 'Health', emoji: '💊' },
-  { id: 'utilities', label: 'Utilities', emoji: '⚡' },
-  { id: 'education', label: 'Education', emoji: '📚' },
-  { id: 'travel', label: 'Travel', emoji: '✈️' },
-  { id: 'fitness', label: 'Fitness', emoji: '💪' },
-  { id: 'groceries', label: 'Groceries', emoji: '🛒' },
-  { id: 'rent', label: 'Rent', emoji: '🏠' },
-  { id: 'other', label: 'Other', emoji: '📦' },
+  { id: 'Food & Dining', label: 'Food', emoji: '🍕' },
+  { id: 'Transport', label: 'Transport', emoji: '🚗' },
+  { id: 'Shopping', label: 'Shopping', emoji: '🛍️' },
+  { id: 'Entertainment', label: 'Entertainment', emoji: '🎬' },
+  { id: 'Health', label: 'Health', emoji: '💊' },
+  { id: 'Utilities', label: 'Utilities', emoji: '⚡' },
+  { id: 'Groceries', label: 'Groceries', emoji: '🛒' },
+  { id: 'Education', label: 'Education', emoji: '📚' },
+  { id: 'Salary', label: 'Salary', emoji: '💰' },
+  { id: 'Freelance', label: 'Freelance', emoji: '💻' },
+  { id: 'Other', label: 'Other', emoji: '📦' },
 ]
 
 const paymentMethods = ['UPI', 'Credit Card', 'Debit Card', 'Net Banking', 'Cash', 'Wallet']
@@ -24,20 +24,51 @@ interface AddExpenseProps {
 }
 
 export default function AddExpense({ onNav }: AddExpenseProps) {
+  const [type, setType] = useState<'expense' | 'income'>('expense')
   const [form, setForm] = useState({
     amount: '',
-    category: 'food',
+    category: 'Food & Dining',
     merchant: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
     paymentMethod: 'UPI',
   })
+  const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [dragOver, setDragOver] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSave = () => {
-    setSaved(true)
-    setTimeout(() => onNav('dashboard'), 1500)
+  const handleSave = async () => {
+    if (!form.merchant || !form.amount) {
+      setError('Please enter both merchant name and amount')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      const selectedCat = categories.find(c => c.id === form.category)
+      const res = await api.transactions.create({
+        merchant: form.merchant,
+        amount: parseFloat(form.amount),
+        category: form.category,
+        type: type,
+        emoji: selectedCat?.emoji || '💸',
+        date: form.date,
+        description: form.notes,
+        paymentMethod: form.paymentMethod,
+      })
+
+      if (res.success) {
+        setSaved(true)
+        setTimeout(() => onNav('dashboard'), 1200)
+      } else {
+        setError(res.message || 'Failed to save transaction')
+      }
+    } catch (err: any) {
+      setError(err.message || 'Server error saving transaction')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (saved) {
@@ -47,8 +78,8 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
           <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={32} className="text-emerald-500" />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Expense saved!</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Redirecting to dashboard…</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Transaction Saved!</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Updating dashboard & analytics…</p>
         </div>
       </div>
     )
@@ -58,14 +89,42 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Add Expense</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Record a new expense manually</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            {type === 'expense' ? 'Add Expense' : 'Add Income'}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Record a transaction in your database</p>
         </div>
         <button
           onClick={() => onNav('dashboard')}
           className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition-colors"
         >
           <X size={18} />
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl text-rose-600 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Type Selector */}
+      <div className="flex gap-2 p-1.5 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-6">
+        <button
+          onClick={() => setType('expense')}
+          className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+            type === 'expense' ? 'bg-white dark:bg-slate-900 text-rose-500 shadow-sm' : 'text-slate-500'
+          }`}
+        >
+          Expense (-)
+        </button>
+        <button
+          onClick={() => setType('income')}
+          className={`flex-1 py-2 text-sm font-semibold rounded-xl transition-all ${
+            type === 'income' ? 'bg-white dark:bg-slate-900 text-emerald-500 shadow-sm' : 'text-slate-500'
+          }`}
+        >
+          Income (+)
         </button>
       </div>
 
@@ -83,7 +142,7 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
               className="text-5xl font-bold text-white bg-transparent border-none outline-none w-48 text-center placeholder-slate-600"
             />
           </div>
-          <p className="text-slate-500 text-xs mt-3">Enter the expense amount</p>
+          <p className="text-slate-500 text-xs mt-3">Enter the {type} amount</p>
         </div>
 
         {/* Form fields */}
@@ -91,19 +150,19 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
           {/* Category */}
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category</label>
-            <div className="grid grid-cols-6 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {categories.map(cat => (
                 <button
                   key={cat.id}
                   onClick={() => setForm(f => ({ ...f, category: cat.id }))}
                   className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all ${
                     form.category === cat.id
-                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 font-semibold'
                       : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-slate-300'
                   }`}
                 >
                   <span className="text-xl">{cat.emoji}</span>
-                  <span className="text-xs text-slate-600 dark:text-slate-400">{cat.label}</span>
+                  <span className="text-xs text-slate-600 dark:text-slate-400 truncate w-full text-center">{cat.label}</span>
                 </button>
               ))}
             </div>
@@ -112,10 +171,12 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
           {/* Merchant & Date */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Merchant / Place</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                {type === 'expense' ? 'Merchant / Place' : 'Source / Employer'}
+              </label>
               <input
                 type="text"
-                placeholder="Swiggy, Amazon, Uber..."
+                placeholder={type === 'expense' ? 'Swiggy, Amazon, Uber...' : 'Company Salary, Client...'}
                 value={form.merchant}
                 onChange={e => setForm(f => ({ ...f, merchant: e.target.value }))}
                 className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all"
@@ -154,33 +215,14 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Notes (optional)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Description (optional)</label>
             <textarea
-              placeholder="Add any notes about this expense..."
+              placeholder="Add details about this transaction..."
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               rows={2}
               className="w-full px-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all resize-none"
             />
-          </div>
-
-          {/* Receipt upload */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Attach Receipt</label>
-            <div
-              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={e => { e.preventDefault(); setDragOver(false) }}
-              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all cursor-pointer ${
-                dragOver
-                  ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Upload size={20} className="text-slate-400 mx-auto mb-2" />
-              <p className="text-sm text-slate-600 dark:text-slate-400">Drag & drop or <span className="text-emerald-600 dark:text-emerald-400 font-medium">browse</span></p>
-              <p className="text-xs text-slate-400 mt-1">PNG, JPG, PDF up to 10MB</p>
-            </div>
           </div>
         </div>
 
@@ -188,22 +230,19 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
         <div className="px-6 pb-6 flex gap-3">
           <button
             onClick={handleSave}
-            className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition-all shadow-sm shadow-emerald-500/25 hover:shadow-emerald-500/40"
+            disabled={saving}
+            className={`flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 rounded-xl transition-all shadow-sm ${
+              saving ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
           >
-            Save Expense
+            {saving ? 'Saving...' : 'Save Transaction'}
           </button>
           <button
             onClick={() => onNav('ocr')}
             className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium py-3 px-4 rounded-xl transition-colors"
           >
             <Scan size={16} />
-            Scan Receipt
-          </button>
-          <button
-            onClick={() => onNav('dashboard')}
-            className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 font-medium py-3 px-4 rounded-xl transition-colors"
-          >
-            Cancel
+            Scan Bill OCR
           </button>
         </div>
       </div>

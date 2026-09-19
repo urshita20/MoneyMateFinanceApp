@@ -41,6 +41,14 @@ export const api = {
       });
       return res.json();
     },
+    setup: async (setupData: { monthlyIncome: number; monthlyBudget: number; savingsTarget?: number }) => {
+      const res = await fetch(`${API_BASE_URL}/api/auth/setup`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(setupData),
+      });
+      return res.json();
+    },
   },
 
   // Analytics API
@@ -69,6 +77,12 @@ export const api = {
       });
       return res.json();
     },
+    getTimeMachine: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/analytics/time-machine`, {
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
   },
 
   // Transactions API
@@ -79,11 +93,28 @@ export const api = {
       });
       return res.json();
     },
-    create: async (txData: { merchant: string; amount: number; category: string; type?: string; emoji?: string }) => {
+    create: async (txData: {
+      merchant: string;
+      amount: number;
+      category: string;
+      type?: string;
+      emoji?: string;
+      date?: string;
+      description?: string;
+      paymentMethod?: string;
+      receiptImage?: string;
+    }) => {
       const res = await fetch(`${API_BASE_URL}/api/transactions`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(txData),
+      });
+      return res.json();
+    },
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/api/transactions/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
       });
       return res.json();
     },
@@ -113,6 +144,13 @@ export const api = {
       });
       return res.json();
     },
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
   },
 
   // Goals API
@@ -136,6 +174,13 @@ export const api = {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ depositAmount }),
+      });
+      return res.json();
+    },
+    delete: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/api/goals/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
       });
       return res.json();
     },

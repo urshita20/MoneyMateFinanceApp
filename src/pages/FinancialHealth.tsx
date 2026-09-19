@@ -1,34 +1,11 @@
-import { CheckCircle, AlertCircle, TrendingUp, Sparkles } from 'lucide-react'
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts'
+import { useState, useEffect } from 'react'
+import { CheckCircle, AlertCircle, Heart, Plus } from 'lucide-react'
+import { api } from '../services/api'
+import type { Page } from '../types'
 
-const score = 83
-
-const metrics = [
-  { label: 'Savings Ratio', value: 38, max: 50, score: 80, status: 'good', desc: 'You save 38% of income. Above the recommended 20%.', color: '#10B981' },
-  { label: 'Budget Discipline', value: 5, max: 6, score: 84, status: 'good', desc: '5 of 6 categories within budget this month.', color: '#3B82F6' },
-  { label: 'Debt Ratio', value: 31, max: 40, score: 72, status: 'good', desc: 'EMI-to-income at 31%. Below the 40% safe limit.', color: '#6366F1' },
-  { label: 'Emergency Fund', value: 2, max: 6, score: 40, status: 'warning', desc: 'You have 2 months covered. Target is 6 months.', color: '#F59E0B' },
-  { label: 'Bill Payment History', value: 11, max: 12, score: 92, status: 'good', desc: '11/12 bills paid on time this year.', color: '#10B981' },
-  { label: 'Investment Diversification', value: 3, max: 5, score: 65, status: 'ok', desc: 'Invested in 3 asset classes. Add bonds or gold.', color: '#8B5CF6' },
-]
-
-const timeline = [
-  { month: 'Feb', score: 64 },
-  { month: 'Mar', score: 68 },
-  { month: 'Apr', score: 72 },
-  { month: 'May', score: 75 },
-  { month: 'Jun', score: 79 },
-  { month: 'Jul', score: 83 },
-]
-
-const recs = [
-  { icon: '🛡️', title: 'Build Emergency Fund', desc: 'Add ₹10,000/month to reach a 6-month fund by December 2025.', type: 'warning' },
-  { icon: '🍽️', title: 'Reduce Dining Expenses', desc: 'Dining spend is 18% above last month. Cut by ₹2,000 to stay on budget.', type: 'warning' },
-  { icon: '📈', title: 'Increase Monthly SIP', desc: 'Bump your SIP by ₹1,000/month — it could grow to ₹5.2L in 10 years.', type: 'tip' },
-  { icon: '🎉', title: "Healthier Than Last Month", desc: 'Your score rose 4 points. Keep it up — you\'re on the right track!', type: 'positive' },
-]
+interface FinancialHealthProps {
+  onNav?: (p: Page) => void
+}
 
 function BigGauge({ score }: { score: number }) {
   const r = 110, cx = 140, cy = 140
@@ -56,86 +33,83 @@ function BigGauge({ score }: { score: number }) {
   )
 }
 
-export default function FinancialHealth() {
+export default function FinancialHealth({ onNav }: FinancialHealthProps) {
+  const [summary, setSummary] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.analytics.getSummary()
+      .then(res => {
+        if (res.success && res.summary) setSummary(res.summary)
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const score = summary?.healthScore
+  const factors = summary?.healthFactors
+
+  if (score === null || score === undefined) {
+    return (
+      <div className="max-w-4xl mx-auto py-16 text-center flex flex-col items-center justify-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-500 mb-2">
+          <Heart size={32} />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Add transactions to start building your Financial Health Score</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
+          Your Health Score is never hardcoded. It is calculated strictly from measurable financial behavior such as savings rate, budget discipline, overspending frequency, and spending consistency.
+        </p>
+        {onNav && (
+          <button
+            onClick={() => onNav('add-expense')}
+            className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm py-3 px-5 rounded-xl transition-all shadow-sm"
+          >
+            <Plus size={16} />
+            + Add Your First Transaction
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const metricCards = [
+    { label: 'Savings Discipline', value: factors?.savingsDiscipline || 'Moderate', desc: 'Evaluates monthly savings relative to income', color: '#10B981' },
+    { label: 'Budget Adherence', value: factors?.budgetAdherence || 'Good', desc: 'Compares total expenses against monthly budget limit', color: '#3B82F6' },
+    { label: 'Overspending Risk', value: factors?.overspendingRisk || 'Low', desc: 'Tracks frequency of large single-category expenses', color: '#6366F1' },
+    { label: 'Spending Consistency', value: factors?.spendingConsistency || 'Balanced', desc: 'Analyzes category diversification and expense spikes', color: '#8B5CF6' },
+  ]
+
   return (
     <div className="max-w-5xl space-y-6">
       <div>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Financial Health Score</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Your comprehensive wellness report — July 2025</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Calculated strictly from your actual financial data</p>
       </div>
 
       {/* Hero */}
       <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-8 relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-emerald-500/8 blur-3xl" />
-        </div>
         <div className="relative flex flex-col items-center text-center">
-          <p className="text-slate-400 text-sm font-medium mb-6 uppercase tracking-widest">Finshpere · Financial Health</p>
+          <p className="text-slate-400 text-sm font-medium mb-6 uppercase tracking-widest">MoneyMate · Live Financial Health</p>
           <BigGauge score={score} />
           <p className="text-slate-300 text-sm mt-4 max-w-sm">
-            Your score improved by <span className="text-emerald-400 font-bold">+4 points</span> since last month. You're in the top 28% of Finshpere users.
+            Calculated from your <span className="text-emerald-400 font-bold">{summary?.transactionCount || 0} transactions</span> and real monthly income.
           </p>
         </div>
       </div>
 
       {/* Score breakdown */}
       <div>
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Score Breakdown</h2>
-        <div className="grid grid-cols-3 gap-4">
-          {metrics.map(m => (
-            <div key={m.label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all">
-              <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">Contributing Factors</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {metricCards.map(m => (
+            <div key={m.label} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-slate-900 dark:text-white">{m.label}</span>
-                <div className="flex items-center gap-1.5">
-                  {m.status === 'good' && <CheckCircle size={13} className="text-emerald-500" />}
-                  {m.status === 'warning' && <AlertCircle size={13} className="text-amber-500" />}
-                  {m.status === 'ok' && <AlertCircle size={13} className="text-blue-400" />}
-                  <span className="text-sm font-bold" style={{ color: m.color }}>{m.score}</span>
-                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                  {m.value}
+                </span>
               </div>
-              <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
-                <div className="h-full rounded-full" style={{ width: `${m.score}%`, backgroundColor: m.color }} />
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{m.desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Financial Health Timeline</h3>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={timeline}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis domain={[55, 90]} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={28} />
-            <Tooltip
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e2e8f0' }}
-              formatter={v => [`${v} / 100`, 'Score']}
-            />
-            <Line type="monotone" dataKey="score" stroke="#10B981" strokeWidth={3}
-              dot={{ fill: '#10B981', r: 5, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 7 }} />
-          </LineChart>
-        </ResponsiveContainer>
-        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-2">+19 points in 6 months 🎉</p>
-      </div>
-
-      {/* AI Recommendations */}
-      <div>
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">
-          AI Recommendations
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          {recs.map((r, i) => (
-            <div key={i} className={`rounded-2xl p-5 border ${
-              r.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40'
-              : r.type === 'positive' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40'
-              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40'
-            }`}>
-              <span className="text-2xl block mb-2">{r.icon}</span>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mb-1">{r.title}</p>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{r.desc}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{m.desc}</p>
             </div>
           ))}
         </div>

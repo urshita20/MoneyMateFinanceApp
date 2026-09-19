@@ -271,10 +271,19 @@ class DataStoreManager {
 
   public extractOcrAmount(rawText: string): string {
     if (!rawText) return '';
-    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // Normalize OCR text: fix common OCR character misreadings (.OO -> .00, .Oo -> .00)
+    let text = rawText
+      .replace(/(\d+)\s*\.\s*([OoSs0-9]{2})/g, (m, g1, g2) => {
+        const cleanG2 = g2.replace(/[OoSs]/g, '0');
+        return `${g1}.${cleanG2}`;
+      })
+      .replace(/([0-9]+)\s*\/[-=]/g, '$1');
+
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
 
     // High Priority Keywords (grand totals / bill amounts / total due)
-    const highPriorityKeywords = [
+    const totalKeywords = [
       /total\s+due/i,
       /bill\s+amt/i,
       /bill\s+amount/i,
@@ -288,82 +297,58 @@ class DataStoreManager {
       /total\s+paid/i,
       /amount\s+paid/i,
       /final\s+total/i,
+      /\bnet\s+total\b/i,
       /\btotal\b/i,
+      /\bamount\b/i,
+      /\bamt\b/i,
     ];
 
-    const extractNumFromLine = (line: string): number | null => {
-      // Find currency numbers like 504.00, 504, 1,250.00
-      const matches = line.match(/(?:₹|rs\.?|inr)?\s*([0-9,]+(?:\.[0-9]{1,2})?)/gi);
-      if (!matches) return null;
+    const extractNumbersFromLine = (line: string): number[] => {
+      const matches = line.match(/(?:₹|rs\.?|inr)?\s*([0-9,]+\.?[0-9]*)/gi);
+      if (!matches) return [];
 
-      let bestVal: number | null = null;
+      const numbers: number[] = [];
       for (const m of matches) {
         const clean = m.replace(/[^0-9.]/g, '');
+        if (!clean) continue;
         const val = parseFloat(clean);
         if (!isNaN(val) && val > 0 && val < 5000000) {
-          // Ignore 4-digit years like 2024, 2025, 2026 if no decimal point
+          // Ignore 4-digit years like 2024, 2025, 2026 if integer without decimal
           if (val >= 2024 && val <= 2030 && !clean.includes('.')) continue;
-          bestVal = val;
+          numbers.push(val);
         }
       }
-      return bestVal;
+      return numbers;
     };
 
-    // 1. Scan line-by-line for high priority total keywords (bottom-up)
-    for (const kw of highPriorityKeywords) {
+    // 1. Line-by-line scanning for total keywords (bottom-up)
+    for (const kw of totalKeywords) {
       for (let i = lines.length - 1; i >= 0; i--) {
         const line = lines[i];
         if (kw.test(line)) {
-          const val = extractNumFromLine(line);
-          if (val !== null && val > 0) {
-            return val.toString();
+          const nums = extractNumbersFromLine(line);
+          if (nums.length > 0) {
+            // Take the MAX positive number on this total line (avoiding 0.00 or smaller sub-items)
+            const maxVal = Math.max(...nums);
+            if (maxVal > 0) {
+              return maxVal.toString();
+            }
           }
         }
       }
     }
 
-    // 2. Generic regex search across full text
-    const genericTotalRegexes = [
-      /(?:total|bill\s+amt|grand\s+total|amount\s+due|net\s+payable|amount)\s*[:=₹Rs\.\s]*([0-9,]+(?:\.[0-9]{1,2})?)/gi,
-      /(?:₹|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]{1,2})?)/gi,
-    ];
-
-    const candidates: number[] = [];
-    for (const reg of genericTotalRegexes) {
-      let match;
-      while ((match = reg.exec(rawText)) !== null) {
-        if (match[1]) {
-          const clean = match[1].replace(/,/g, '');
-          const val = parseFloat(clean);
-          if (!isNaN(val) && val > 0 && val < 5000000) {
-            if (val >= 2024 && val <= 2030 && !clean.includes('.')) continue;
-            candidates.push(val);
-          }
-        }
-      }
-    }
-
-    if (candidates.length > 0) {
-      return Math.max(...candidates).toString();
-    }
-
-    // 3. Fallback: Find largest decimal/positive number in lines
-    const allNums: number[] = [];
+    // 2. Global scan across all lines for numbers
+    const allValidNumbers: number[] = [];
     for (const line of lines) {
-      const nums = line.match(/\b[0-9]+(?:\.[0-9]{1,2})?\b/g);
-      if (nums) {
-        for (const numStr of nums) {
-          const val = parseFloat(numStr);
-          if (!isNaN(val) && val > 0 && val < 5000000) {
-            if (val >= 2024 && val <= 2030 && !numStr.includes('.')) continue;
-            allNums.push(val);
-          }
-        }
+      const nums = extractNumbersFromLine(line);
+      for (const n of nums) {
+        allValidNumbers.push(n);
       }
     }
 
-    if (allNums.length > 0) {
-      return Math.max(...allNums).toString();
+    if (allValidNumbers.length > 0) {
+      return Math.max(...allValidNumbers).toString();
     }
 
     return '';

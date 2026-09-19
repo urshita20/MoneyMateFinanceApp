@@ -60,6 +60,27 @@ export default function BankStatementImportModal({ isOpen, onClose, onImportComp
 
   if (!isOpen) return null
 
+  const handleCancel = () => {
+    if (step !== 'upload') {
+      setStep('upload')
+      setFileName('')
+      setRawHeaders([])
+      setRawRows([])
+      setParsedItems([])
+      setMapping({
+        date: '',
+        merchant: '',
+        amount: '',
+        debit: '',
+        credit: '',
+        type: '',
+        category: '',
+      })
+    } else {
+      onClose()
+    }
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -485,10 +506,10 @@ export default function BankStatementImportModal({ isOpen, onClose, onImportComp
         {/* Modal Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <button
-            onClick={onClose}
+            onClick={handleCancel}
             className="px-4 py-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-800 transition-colors"
           >
-            Cancel
+            {step !== 'upload' ? 'Cancel & Upload New Statement' : 'Cancel'}
           </button>
 
           {step === 'mapping' && (

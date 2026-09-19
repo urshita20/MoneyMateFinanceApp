@@ -103,11 +103,22 @@ export const api = {
       description?: string;
       paymentMethod?: string;
       receiptImage?: string;
+      source?: string;
+      receiptUrl?: string;
+      externalTransactionId?: string;
     }) => {
       const res = await fetch(`${API_BASE_URL}/api/transactions`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(txData),
+      });
+      return res.json();
+    },
+    createBatch: async (transactions: any[]) => {
+      const res = await fetch(`${API_BASE_URL}/api/transactions/batch`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ transactions }),
       });
       return res.json();
     },

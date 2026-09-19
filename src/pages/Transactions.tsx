@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
-import { Search, Filter, Download, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Search, Filter, Download, ArrowUp, ArrowDown, Trash2, Plus, PieChart, Upload, Camera, FileSpreadsheet, Settings } from 'lucide-react'
 import { api } from '../services/api'
 import { dataStore } from '../services/dataStore'
 import type { Page } from '../types'
+import BankStatementImportModal from '../components/BankStatementImportModal'
+import ReceiptImportModal from '../components/ReceiptImportModal'
 
-const categoryOptions = ['All', 'Food & Dining', 'Housing', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Groceries', 'Utilities', 'Salary', 'Freelance', 'Other']
+const categoryOptions = ['All', 'Food & Dining', 'Housing', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Groceries', 'Utilities', 'Education', 'Salary', 'Freelance', 'Other', 'Uncategorized']
 
 interface TransactionsProps {
   onNav?: (p: Page) => void
@@ -12,19 +14,27 @@ interface TransactionsProps {
 
 export default function Transactions({ onNav }: TransactionsProps) {
   const [txList, setTxList] = useState<any[]>([])
+  const [profile, setProfile] = useState(dataStore.getProfile())
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [sort, setSort] = useState<'date' | 'amount'>('date')
   const [loading, setLoading] = useState(true)
 
+  // Modals state
+  const [isBankImportOpen, setIsBankImportOpen] = useState(false)
+  const [isReceiptImportOpen, setIsReceiptImportOpen] = useState(false)
+
   const fetchTransactions = () => {
     setLoading(true)
     const local = dataStore.getTransactions()
+    const currentProfile = dataStore.getProfile()
     setTxList(local)
+    setProfile(currentProfile)
     setLoading(false)
 
     dataStore.syncWithBackend().then(() => {
       setTxList(dataStore.getTransactions())
+      setProfile(dataStore.getProfile())
     }).catch(console.warn)
   }
 
@@ -45,32 +55,34 @@ export default function Transactions({ onNav }: TransactionsProps) {
   const filtered = txList
     .filter(tx => {
       const matchSearch =
-        tx.merchant.toLowerCase().includes(search.toLowerCase()) ||
-        tx.category.toLowerCase().includes(search.toLowerCase()) ||
+        (tx.merchant || '').toLowerCase().includes(search.toLowerCase()) ||
+        (tx.category || '').toLowerCase().includes(search.toLowerCase()) ||
         (tx.description && tx.description.toLowerCase().includes(search.toLowerCase()))
       const matchCat = category === 'All' || tx.category === category
       return matchSearch && matchCat
     })
     .sort((a, b) => {
       if (sort === 'amount') return b.amount - a.amount
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      return new Date(b.createdAt || b.date).getTime() - new Date(a.createdAt || a.date).getTime()
     })
 
-  const totalIncome = txList.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0)
   const totalExpense = txList.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0)
+  const monthlyBudget = profile?.monthlyBudget || 0
+  const remainingBudget = monthlyBudget > 0 ? monthlyBudget - totalExpense : 0
 
   return (
-    <div className="max-w-4xl space-y-5">
+    <div className="max-w-5xl space-y-6">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Transactions</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Real-time persistent transaction history</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Real-time persistent transaction history and automated imports</p>
         </div>
         <div className="flex items-center gap-3">
           {onNav && (
             <button
               onClick={() => onNav('add-expense')}
-              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs px-3.5 py-2 rounded-xl transition-all shadow-sm"
+              className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl transition-all shadow-sm shadow-emerald-500/20"
             >
               <Plus size={14} />
               + Add Transaction
@@ -79,24 +91,98 @@ export default function Transactions({ onNav }: TransactionsProps) {
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 shadow-sm flex items-center gap-3">
-          <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-            <ArrowUp size={16} className="text-emerald-600" />
-          </div>
+      {/* ================================================== */}
+      {/* NEW TOP SUMMARY SECTION — EXACTLY THREE CARDS      */}
+      {/* ================================================== */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* CARD 1 — BUDGET */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-xs text-slate-400">Total Income Recorded</p>
-            <p className="text-lg font-bold text-emerald-600">+₹{totalIncome.toLocaleString('en-IN')}</p>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Monthly Budget</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 flex items-center justify-center">
+                <PieChart size={16} />
+              </div>
+            </div>
+            {monthlyBudget > 0 ? (
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-slate-400">Monthly Budget</p>
+                  <p className="text-lg font-bold text-slate-900 dark:text-white">₹{monthlyBudget.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <p className="text-xs text-slate-400">Remaining Budget</p>
+                  <p className={`text-base font-bold ${remainingBudget < 0 ? 'text-rose-500' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    ₹{remainingBudget.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="py-2">
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Budget not set</p>
+                {onNav && (
+                  <button
+                    onClick={() => onNav('budget')}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 px-3 py-1.5 rounded-lg transition-colors border border-emerald-200/50 dark:border-emerald-800/50"
+                  >
+                    <Settings size={12} />
+                    Set Budget
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-4 shadow-sm flex items-center gap-3">
-          <div className="w-9 h-9 bg-rose-100 dark:bg-rose-900/30 rounded-xl flex items-center justify-center">
-            <ArrowDown size={16} className="text-rose-600" />
-          </div>
+
+        {/* CARD 2 — TOTAL EXPENSES RECORDED */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
           <div>
-            <p className="text-xs text-slate-400">Total Expenses Recorded</p>
-            <p className="text-lg font-bold text-rose-500">-₹{totalExpense.toLocaleString('en-IN')}</p>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Expenses</span>
+              <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 flex items-center justify-center">
+                <ArrowDown size={16} />
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-slate-400">Total Expenses Recorded</p>
+              <p className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                ₹{totalExpense.toLocaleString('en-IN')}
+              </p>
+              {totalExpense === 0 && (
+                <p className="text-xs text-slate-400 mt-1">No expenses recorded yet.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* CARD 3 — IMPORT FINANCIAL HISTORY */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Automation</span>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-500 flex items-center justify-center">
+                <Upload size={16} />
+              </div>
+            </div>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Import Financial History</h3>
+            <p className="text-xs text-slate-400 mt-0.5 mb-3">Upload your bank statement or receipt history</p>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => setIsBankImportOpen(true)}
+                className="w-full flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-medium text-xs py-2 px-3 rounded-xl hover:bg-slate-800 dark:hover:bg-white transition-colors"
+              >
+                <FileSpreadsheet size={13} />
+                Upload CSV / Excel
+              </button>
+              <button
+                onClick={() => setIsReceiptImportOpen(true)}
+                className="w-full flex items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 font-medium text-xs py-2 px-3 rounded-xl transition-colors"
+              >
+                <Camera size={13} />
+                Upload Receipt Images
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -155,8 +241,8 @@ export default function Transactions({ onNav }: TransactionsProps) {
               💸
             </div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">No transactions yet</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
-              Your transactions will appear here once you add them manually or scan a receipt.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4 max-w-xs">
+              Start by uploading your bank statement or adding your first transaction.
             </p>
             {onNav && (
               <button
@@ -178,7 +264,19 @@ export default function Transactions({ onNav }: TransactionsProps) {
                 {tx.emoji || '💸'}
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{tx.merchant}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{tx.merchant}</p>
+                  {tx.source === 'bank_import' && (
+                    <span className="bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-blue-200/50 dark:border-blue-800/50">
+                      Bank Statement
+                    </span>
+                  )}
+                  {tx.source === 'receipt_ocr' && (
+                    <span className="bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-purple-200/50 dark:border-purple-800/50">
+                      Receipt OCR
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {tx.category} {tx.description ? `· ${tx.description}` : ''}
                 </p>
@@ -202,6 +300,19 @@ export default function Transactions({ onNav }: TransactionsProps) {
           ))
         )}
       </div>
+
+      {/* Import Modals */}
+      <BankStatementImportModal
+        isOpen={isBankImportOpen}
+        onClose={() => setIsBankImportOpen(false)}
+        onImportComplete={fetchTransactions}
+      />
+
+      <ReceiptImportModal
+        isOpen={isReceiptImportOpen}
+        onClose={() => setIsReceiptImportOpen(false)}
+        onImportComplete={fetchTransactions}
+      />
     </div>
   )
 }

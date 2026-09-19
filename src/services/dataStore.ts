@@ -10,6 +10,9 @@ export interface TransactionItem {
   date: string;
   description?: string;
   paymentMethod?: string;
+  source?: 'manual' | 'receipt_ocr' | 'bank_import';
+  receiptUrl?: string;
+  externalTransactionId?: string;
   createdAt: string;
 }
 
@@ -246,6 +249,9 @@ class DataStoreManager {
       date: tx.date || new Date().toISOString().split('T')[0],
       description: tx.description || '',
       paymentMethod: tx.paymentMethod || 'UPI',
+      source: tx.source || 'manual',
+      receiptUrl: tx.receiptUrl || '',
+      externalTransactionId: tx.externalTransactionId || '',
       createdAt: new Date().toISOString(),
     };
 
@@ -261,6 +267,79 @@ class DataStoreManager {
 
     this.saveData(data);
     return newTx;
+  }
+
+  public categorizeMerchant(merchant: string, description: string = '', amount: number = 0, type: string = 'expense'): { category: string; emoji: string } {
+    if (type === 'income') {
+      return { category: 'Salary', emoji: '💰' };
+    }
+
+    const text = `${merchant} ${description}`.toLowerCase();
+
+    if (/swiggy|zomato|dominos|pizza|mcdonald|starbucks|cafe|restaurant|diner|food|eatery|burger|kfc|chai|baking|bakery/i.test(text)) {
+      return { category: 'Food & Dining', emoji: '🍕' };
+    }
+    if (/uber|ola|rapido|metro|cab|taxi|transit|bus|train|irctc|fuel|petrol|shell|hpcl|bpcl|toll/i.test(text)) {
+      return { category: 'Transport', emoji: '🚗' };
+    }
+    if (/amazon|flipkart|myntra|ajio|zara|h&m|decathlon|store|retail|mall|shopping|meesho|nykaa/i.test(text)) {
+      return { category: 'Shopping', emoji: '🛍️' };
+    }
+    if (/electricity|power|water|gas|utility|bescom|tata power|airtel|jio|vi|broadband|recharge|dth/i.test(text)) {
+      return { category: 'Utilities', emoji: '⚡' };
+    }
+    if (/blinkit|zepto|instamart|bigbasket|grofers|dmart|supermarket|grocery|mart|spencer|nature/i.test(text)) {
+      return { category: 'Groceries', emoji: '🛒' };
+    }
+    if (/pharmacy|apollo|1mg|netmeds|hospital|doctor|clinic|medical|health|diagnostic|lab/i.test(text)) {
+      return { category: 'Health', emoji: '💊' };
+    }
+    if (/netflix|spotify|cinema|pvr|inox|movie|bookmyshow|hotstar|prime|youtube|game|steam/i.test(text)) {
+      return { category: 'Entertainment', emoji: '🎬' };
+    }
+    if (/udemy|coursera|school|college|tuition|books|stationery|course|exam/i.test(text)) {
+      return { category: 'Education', emoji: '📚' };
+    }
+
+    return { category: 'Uncategorized', emoji: '📦' };
+  }
+
+  public checkDuplicate(tx: { merchant: string; amount: number; date: string; externalTransactionId?: string }): { isDuplicate: boolean; existingTx?: TransactionItem } {
+    const transactions = this.getTransactions();
+    const dateStr = (tx.date || '').split('T')[0];
+    const amountNum = Number(tx.amount || 0);
+    const normMerchant = (tx.merchant || '').toLowerCase().trim();
+
+    const existing = transactions.find(existingTx => {
+      if (tx.externalTransactionId && existingTx.externalTransactionId === tx.externalTransactionId) {
+        return true;
+      }
+      const eDate = (existingTx.date || '').split('T')[0];
+      const eAmount = Number(existingTx.amount || 0);
+      const eMerchant = (existingTx.merchant || '').toLowerCase().trim();
+
+      const sameDate = eDate === dateStr;
+      const sameAmount = Math.abs(eAmount - amountNum) < 0.01;
+      const sameMerchant = eMerchant.includes(normMerchant) || normMerchant.includes(eMerchant);
+
+      return sameDate && sameAmount && sameMerchant;
+    });
+
+    return {
+      isDuplicate: Boolean(existing),
+      existingTx: existing,
+    };
+  }
+
+  public addBatchTransactions(items: Omit<TransactionItem, 'id' | 'createdAt'>[]): TransactionItem[] {
+    const added: TransactionItem[] = [];
+    for (const item of items) {
+      const created = this.addTransaction(item);
+      added.push(created);
+    }
+    // Also trigger background POST to backend
+    api.transactions.createBatch(added).catch(console.warn);
+    return added;
   }
 
   public deleteTransaction(id: string) {

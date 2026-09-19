@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Wallet, TrendingUp, TrendingDown, PiggyBank, Heart, Plus, Scan, Sparkles, ArrowRight } from 'lucide-react'
 import {
   BarChart,
@@ -13,7 +14,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { spendingByCategory, monthlyData, weeklyTrend, transactions } from '../data/mockData'
+import { spendingByCategory as defaultCategoryData, monthlyData as defaultMonthlyData, weeklyTrend as defaultWeeklyTrend, transactions as defaultTransactions } from '../data/mockData'
+import { api } from '../services/api'
 import type { Page } from '../types'
 
 interface DashboardProps {
@@ -21,6 +23,39 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNav }: DashboardProps) {
+  const [summary, setSummary] = useState<any>(null)
+  const [categories, setCategories] = useState(defaultCategoryData)
+  const [monthlyTrends, setMonthlyTrends] = useState(defaultMonthlyData)
+  const [weeklyTrends, setWeeklyTrends] = useState(defaultWeeklyTrend)
+  const [txList, setTxList] = useState(defaultTransactions)
+
+  useEffect(() => {
+    // Fetch live dashboard analytics from Render backend
+    api.analytics.getSummary().then(res => {
+      if (res.success && res.summary) setSummary(res.summary)
+    }).catch(console.error)
+
+    api.analytics.getSpendingByCategory().then(res => {
+      if (res.success && res.categories) setCategories(res.categories)
+    }).catch(console.error)
+
+    api.analytics.getMonthlyTrends().then(res => {
+      if (res.success && res.monthlyData) setMonthlyTrends(res.monthlyData)
+    }).catch(console.error)
+
+    api.transactions.getAll().then(res => {
+      if (res.success && res.transactions) setTxList(res.transactions)
+    }).catch(console.error)
+  }, [])
+
+  const statCardsData = [
+    { title: 'Total Balance', value: summary ? `₹${summary.netWorth.toLocaleString()}` : '₹1,24,500', change: '+8.2%', icon: Wallet, bg: 'bg-emerald-500', positive: true },
+    { title: 'Monthly Income', value: summary ? `₹${summary.monthlyIncome.toLocaleString()}` : '₹85,000', change: 'Stable', icon: TrendingUp, bg: 'bg-blue-500', positive: true },
+    { title: 'Monthly Expenses', value: summary ? `₹${summary.monthlyExpense.toLocaleString()}` : '₹52,340', change: '+4.1%', icon: TrendingDown, bg: 'bg-rose-400', positive: false },
+    { title: 'Savings', value: summary ? `₹${(summary.monthlyIncome - summary.monthlyExpense).toLocaleString()}` : '₹32,660', change: '+12%', icon: PiggyBank, bg: 'bg-violet-500', positive: true },
+    { title: 'Health Score', value: summary ? `${summary.healthScore} / 100` : '74 / 100', change: 'Good', icon: Heart, bg: 'bg-amber-500', positive: true },
+  ]
+
   return (
     <div className="space-y-6 max-w-[1280px]">
       {/* Header */}
@@ -36,13 +71,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
 
       {/* Stat cards */}
       <div className="grid grid-cols-5 gap-4">
-        {[
-          { title: 'Total Balance', value: '₹1,24,500', change: '+8.2%', icon: Wallet, bg: 'bg-emerald-500', positive: true },
-          { title: 'Monthly Income', value: '₹85,000', change: 'Stable', icon: TrendingUp, bg: 'bg-blue-500', positive: true },
-          { title: 'Monthly Expenses', value: '₹52,340', change: '+4.1%', icon: TrendingDown, bg: 'bg-rose-400', positive: false },
-          { title: 'Savings', value: '₹32,660', change: '+12%', icon: PiggyBank, bg: 'bg-violet-500', positive: true },
-          { title: 'Health Score', value: '74 / 100', change: 'Good', icon: Heart, bg: 'bg-amber-500', positive: true },
-        ].map(card => (
+        {statCardsData.map(card => (
           <div
             key={card.title}
             className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm hover:shadow-md transition-all group"
@@ -75,7 +104,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
           <ResponsiveContainer width="100%" height={160}>
             <PieChart>
               <Pie
-                data={spendingByCategory}
+                data={categories}
                 cx="50%"
                 cy="50%"
                 innerRadius={45}
@@ -83,7 +112,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
                 paddingAngle={3}
                 dataKey="value"
               >
-                {spendingByCategory.map((entry, i) => (
+                {categories.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
               </Pie>
@@ -91,7 +120,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
             </PieChart>
           </ResponsiveContainer>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-2">
-            {spendingByCategory.map(cat => (
+            {categories.map(cat => (
               <div key={cat.name} className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                 <span className="truncate">{cat.name}</span>
@@ -111,7 +140,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={monthlyData} barSize={10} barGap={3}>
+            <BarChart data={monthlyTrends} barSize={10} barGap={3}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis
@@ -135,7 +164,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Spending Trend (This Week)</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={weeklyTrend}>
+            <LineChart data={weeklyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis
@@ -176,7 +205,7 @@ export default function Dashboard({ onNav }: DashboardProps) {
             </button>
           </div>
           <div className="space-y-1">
-            {transactions.slice(0, 6).map(tx => (
+            {txList.slice(0, 6).map(tx => (
               <div
                 key={tx.id}
                 className="flex items-center justify-between py-2.5 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"

@@ -114,8 +114,8 @@ export default function App() {
       {page === 'ocr' && <OCRScanner onNav={nav} />}
       {page === 'bank-statement' && <BankStatementScanner onNav={nav} />}
       {page === 'goals' && <Goals />}
-      {page === 'knowledge' && <KnowledgeHub />}
-      {page === 'settings' && <Settings />}
+      {page === 'knowledge' && <KnowledgeHub onNav={nav} />}
+      {page === 'settings' && <Settings onNav={nav} user={user} onLogout={handleLogout} />}
       {page === 'add-expense' && <AddExpense onNav={nav} />}
       {page === 'investments' && <Investments />}
       {page === 'portfolio' && <Portfolio />}

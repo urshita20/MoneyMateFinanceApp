@@ -32,15 +32,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
   const [goalsList, setGoalsList] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const loadData = () => {
-    setLoading(true)
-    const local = dataStore.getDashboardSummary()
-    setSummary(local.summary)
-    setTxList(local.transactions)
-    setGoalsList(local.goals)
-
-    // Calculate category breakdown from local transactions
-    const totalSpent = local.summary.monthlyExpense
+  const computeCategoriesFromTx = (txs: any[]) => {
     const catMap: Record<string, number> = {}
     const categoryColors: Record<string, string> = {
       'Food & Dining': '#F97316',
@@ -50,22 +42,42 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
       'Entertainment': '#8B5CF6',
       'Health': '#10B981',
       'Utilities': '#F59E0B',
-      'Groceries': '#10B981',
-      'Education': '#6366F1',
+      'Groceries': '#06B6D4',
+      'Education': '#A855F7',
+      'Salary': '#10B981',
+      'Freelance': '#3B82F6',
+      'Uncategorized': '#94A3B8',
       'Other': '#64748B',
     }
 
-    local.transactions.filter(t => t.type === 'expense').forEach(t => {
-      catMap[t.category] = (catMap[t.category] || 0) + t.amount
+    const expenses = (txs || []).filter(t => t && t.type !== 'income' && Number(t.amount || 0) > 0)
+    expenses.forEach(t => {
+      const cat = t.category || 'Other'
+      catMap[cat] = (catMap[cat] || 0) + Number(t.amount || 0)
     })
 
-    const catList = Object.keys(catMap).map(cat => ({
+    const totalExpenseSum = Object.values(catMap).reduce((a, b) => a + b, 0)
+
+    if (totalExpenseSum <= 0) return []
+
+    return Object.keys(catMap).map(cat => ({
       name: cat,
       amount: catMap[cat],
-      value: totalSpent > 0 ? Math.round((catMap[cat] / totalSpent) * 100) : 0,
+      value: Math.max(1, Math.round((catMap[cat] / totalExpenseSum) * 100)),
       color: categoryColors[cat] || '#64748B',
-    }))
-    setCategories(catList)
+    })).sort((a, b) => b.amount - a.amount)
+  }
+
+  const loadData = () => {
+    setLoading(true)
+    const local = dataStore.getDashboardSummary()
+    setSummary(local.summary)
+    setTxList(local.transactions)
+    setGoalsList(local.goals)
+
+    // Calculate category breakdown from actual local transactions
+    const computedCats = computeCategoriesFromTx(local.transactions)
+    setCategories(computedCats)
 
     // Compute Monthly Trends (Income vs Expenses) from available transactions
     const monthMap: Record<string, { income: number; expense: number }> = {}
@@ -90,7 +102,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
     // Compute Weekly Trends from available expense transactions
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const dayMap: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
-    local.transactions.filter(t => t.type === 'expense').forEach(t => {
+    local.transactions.filter(t => t.type === 'expense' || t.type !== 'income').forEach(t => {
       let d = new Date(t.date)
       if (isNaN(d.getTime())) d = new Date()
       const dayName = daysOfWeek[d.getDay()]
@@ -108,12 +120,24 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
 
     // Background sync with API and API analytics
     dataStore.syncWithBackend().then(() => {
+      const updatedLocal = dataStore.getDashboardSummary()
+      setSummary(updatedLocal.summary)
+      setTxList(updatedLocal.transactions)
+      setGoalsList(updatedLocal.goals)
+
+      const updatedCats = computeCategoriesFromTx(updatedLocal.transactions)
+      if (updatedCats.length > 0) {
+        setCategories(updatedCats)
+      } else {
+        api.analytics.getSpendingByCategory().then(catRes => {
+          if (catRes?.success && catRes.categories?.length > 0) setCategories(catRes.categories)
+        }).catch(() => {})
+      }
+
       Promise.all([
-        api.analytics.getSpendingByCategory().catch(() => null),
         api.analytics.getMonthlyTrends().catch(() => null),
         api.analytics.getWeeklyTrends().catch(() => null),
-      ]).then(([catRes, monthRes, weekRes]) => {
-        if (catRes?.success && catRes.categories?.length > 0) setCategories(catRes.categories)
+      ]).then(([monthRes, weekRes]) => {
         if (monthRes?.success && monthRes.monthlyData?.length > 0) setMonthlyTrends(monthRes.monthlyData)
         if (weekRes?.success && weekRes.weeklyTrend?.length > 0) setWeeklyTrends(weekRes.weeklyTrend)
       }).catch(console.warn)
@@ -271,7 +295,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
                   <div key={cat.name} className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
                     <span className="truncate">{cat.name}</span>
-                    <span className="ml-auto font-medium">{cat.value}%</span>
+                    <span className="ml-auto font-medium">{cat.amount ? `₹${cat.amount.toLocaleString('en-IN')}` : ''} ({cat.value}%)</span>
                   </div>
                 ))}
               </div>

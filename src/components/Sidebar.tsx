@@ -2,7 +2,7 @@ import {
   LayoutDashboard, ArrowLeftRight, PieChart, Sparkles, Target,
   Scan, MessageSquare, BookOpen, Settings, TrendingUp, Heart, LogOut,
   BarChart2, Globe, Activity, Lightbulb,
-  Clock, Shield, Users,
+  Clock, Shield, Users, FileSpreadsheet,
 } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
@@ -15,6 +15,13 @@ const sections = [
       { icon: ArrowLeftRight,  label: 'Transactions',  page: 'transactions' as Page },
       { icon: PieChart,        label: 'Budget',         page: 'budget' as Page },
       { icon: Target,          label: 'Goals',          page: 'goals' as Page },
+    ],
+  },
+  {
+    label: 'Scanner',
+    items: [
+      { icon: Scan,            label: 'OCR Scanner',    page: 'ocr' as Page },
+      { icon: FileSpreadsheet, label: 'Bank Statement', page: 'bank-statement' as Page },
     ],
   },
   {
@@ -41,7 +48,6 @@ const sections = [
     items: [
       { icon: Sparkles,       label: 'AI Insights',   page: 'ai-dashboard' as Page },
       { icon: MessageSquare,  label: 'AI Assistant',   page: 'chat' as Page },
-      { icon: Scan,           label: 'OCR Scanner',    page: 'ocr' as Page },
     ],
   },
   {

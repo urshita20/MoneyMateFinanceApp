@@ -10,6 +10,7 @@ export type Page =
   | 'insights'
   | 'goals'
   | 'ocr'
+  | 'bank-statement'
   | 'chat'
   | 'health'
   | 'knowledge'

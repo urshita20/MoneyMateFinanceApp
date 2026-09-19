@@ -14,6 +14,7 @@ import Budget from './pages/Budget'
 import AIInsights from './pages/AIInsights'
 import AIChat from './pages/AIChat'
 import OCRScanner from './pages/OCRScanner'
+import BankStatementScanner from './pages/BankStatementScanner'
 import Goals from './pages/Goals'
 import KnowledgeHub from './pages/KnowledgeHub'
 import Settings from './pages/Settings'
@@ -97,6 +98,7 @@ export default function App() {
       {page === 'insights' && <AIInsights />}
       {page === 'chat' && <AIChat />}
       {page === 'ocr' && <OCRScanner onNav={nav} />}
+      {page === 'bank-statement' && <BankStatementScanner onNav={nav} />}
       {page === 'goals' && <Goals />}
       {page === 'knowledge' && <KnowledgeHub />}
       {page === 'settings' && <Settings />}

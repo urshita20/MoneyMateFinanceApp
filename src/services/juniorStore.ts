@@ -177,19 +177,19 @@ class JuniorStoreManager {
 
     // Default Initial Seed Data if never set up
     return {
-      hasCompletedSetup: true,
+      hasCompletedSetup: false,
       profile: {
-        childName: 'Junior Saver',
+        childName: '',
         childAge: 10,
-        allowanceAmount: 500,
-        allowanceFrequency: 'Weekly',
+        allowanceAmount: 1000,
+        allowanceFrequency: 'Monthly',
         parentPin: '1234',
-        xp: 240,
+        xp: 0,
       },
       balances: {
-        spend: 420,
-        save: 1120,
-        give: 300,
+        spend: 500,
+        save: 350,
+        give: 150,
       },
       jarAllocation: {
         spendPct: 50,
@@ -197,33 +197,26 @@ class JuniorStoreManager {
         givePct: 15,
       },
       streaks: {
-        savingStreak: 21,
-        questStreak: 12,
-        budgetWins: 2,
-        giveStreak: 4,
+        savingStreak: 0,
+        questStreak: 0,
+        budgetWins: 0,
+        giveStreak: 0,
       },
       wishlist: [
-        { id: '1', itemName: 'New Bicycle', emoji: '🚲', targetPrice: 8000, saved: 5200, color: '#0EA5E9' },
-        { id: '2', itemName: 'Gaming Headset', emoji: '🎧', targetPrice: 3500, saved: 3150, color: '#8B5CF6' },
-        { id: '3', itemName: 'Football Boots', emoji: '⚽', targetPrice: 2000, saved: 800, color: '#10B981' },
+        { id: '1', itemName: 'New Bicycle', emoji: '🚲', targetPrice: 5000, saved: 1500, color: '#0EA5E9' },
+        { id: '2', itemName: 'Gaming Headset', emoji: '🎧', targetPrice: 2500, saved: 800, color: '#8B5CF6' },
       ],
       quests: [
         { id: 1, title: 'Clean Bedroom', desc: 'Tidy up your room and make your bed', reward: 50, xp: 20, emoji: '🛏️', status: 'pending', daysLeft: 1 },
-        { id: 2, title: 'Finish Math Homework', desc: 'Complete all practice problems', reward: 80, xp: 35, emoji: '📐', status: 'pending', daysLeft: 2 },
-        { id: 3, title: 'Water Plants for 5 Days', desc: 'Water the balcony plants daily', reward: 100, xp: 50, emoji: '🌱', status: 'awaiting', streak: 5 },
-        { id: 4, title: 'Read for 30 Minutes', desc: 'Read any book of your choice', reward: 40, xp: 15, emoji: '📖', status: 'approved' },
+        { id: 2, title: 'Finish Homework', desc: 'Complete all practice problems', reward: 80, xp: 35, emoji: '📐', status: 'pending', daysLeft: 2 },
+        { id: 3, title: 'Read for 30 Minutes', desc: 'Read any book of your choice', reward: 40, xp: 15, emoji: '📖', status: 'pending' },
       ],
       badges: [
-        { id: 1, emoji: '🔥', title: '3-Week Savings Streak', desc: 'Saved money every week for 3 weeks straight', earned: true, date: 'Sep 15', rarity: 'Rare' },
-        { id: 2, emoji: '🏆', title: 'Budget Hero', desc: 'Stayed within all spending limits for a full month', earned: true, date: 'Sep 1', rarity: 'Epic' },
-        { id: 3, emoji: '💰', title: 'First ₹100 Saved', desc: 'Locked your first ₹100 into the savings vault', earned: true, date: 'Aug 20', rarity: 'Common' },
-        { id: 4, emoji: '🎯', title: 'Goal Crusher', desc: 'Reached 100% on your first Dream Goal', earned: false, rarity: 'Uncommon', hint: 'Save 100% toward any goal' },
+        { id: 1, emoji: '🔥', title: 'First Savings Goal', desc: 'Started your first savings goal', earned: true, date: 'Today', rarity: 'Common' },
+        { id: 2, emoji: '🏆', title: 'Budget Explorer', desc: 'Configured your monthly kids budget', earned: true, date: 'Today', rarity: 'Epic' },
+        { id: 3, emoji: '💰', title: 'First ₹100 Saved', desc: 'Locked your first ₹100 into the savings vault', earned: false, rarity: 'Common', hint: 'Save ₹100 into goal' },
       ],
-      activity: [
-        { id: 'a1', emoji: '✅', label: 'Quest: Clean bedroom', amount: 50, time: '2h ago', type: 'reward' },
-        { id: 'a2', emoji: '🍦', label: 'Ice cream snack', amount: -30, time: 'Yesterday', type: 'spend' },
-        { id: 'a3', emoji: '📚', label: 'Allowance received', amount: 500, time: '3 days ago', type: 'income' },
-      ],
+      activity: [],
     }
   }
 
@@ -421,5 +414,4 @@ class JuniorStoreManager {
 
 export const juniorStore = new JuniorStoreManager()
 export default juniorStore
-
 

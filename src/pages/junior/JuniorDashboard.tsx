@@ -66,7 +66,15 @@ export default function JuniorDashboard() {
   const handleSetupSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!setupForm.childName.trim()) {
-      setSetupError('Please enter child name')
+      setSetupError("Please enter child's name")
+      return
+    }
+    if (!setupForm.childAge || setupForm.childAge < 3 || setupForm.childAge > 18) {
+      setSetupError("Please enter a valid age between 3 and 18")
+      return
+    }
+    if (!setupForm.allowanceAmount || setupForm.allowanceAmount <= 0) {
+      setSetupError("Please enter a valid monthly budget amount (₹)")
       return
     }
     if (setupForm.pin.length !== 4 || !/^\d{4}$/.test(setupForm.pin)) {
@@ -78,15 +86,20 @@ export default function JuniorDashboard() {
       return
     }
 
+    const monthlyBudget = Number(setupForm.allowanceAmount)
+    const spendStart = Math.round((setupForm.spendPct / 100) * monthlyBudget)
+    const saveStart = Math.round((setupForm.savePct / 100) * monthlyBudget)
+    const giveStart = Math.max(0, monthlyBudget - spendStart - saveStart)
+
     juniorStore.setupProfile({
       childName: setupForm.childName.trim(),
       childAge: Number(setupForm.childAge),
-      allowanceAmount: Number(setupForm.allowanceAmount) || 0,
-      allowanceFrequency: setupForm.allowanceFrequency,
+      allowanceAmount: monthlyBudget,
+      allowanceFrequency: 'Monthly',
       parentPin: setupForm.pin,
-      spendStart: Number(setupForm.spendStart) || 0,
-      saveStart: Number(setupForm.saveStart) || 0,
-      giveStart: Number(setupForm.giveStart) || 0,
+      spendStart,
+      saveStart,
+      giveStart,
       spendPct: setupForm.spendPct,
       savePct: setupForm.savePct,
       givePct: setupForm.givePct,
@@ -95,6 +108,7 @@ export default function JuniorDashboard() {
     setShowSetupModal(false)
     setSetupError('')
   }
+
 
   const handleDepositAllowance = () => {
     const amt = Number(allowanceInput) || data.profile.allowanceAmount
@@ -141,94 +155,52 @@ export default function JuniorDashboard() {
             <form onSubmit={handleSetupSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Child's Name *</label>
+                  <label className="text-xs font-semibold text-slate-700 mb-1 block">Child's Name *</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Leo"
                     value={setupForm.childName}
                     onChange={e => setSetupForm({ ...setupForm, childName: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none"
+                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Child's Age *</label>
+                  <label className="text-xs font-semibold text-slate-700 mb-1 block">Child's Age *</label>
                   <input
                     type="number"
-                    min={4}
+                    min={3}
                     max={18}
                     required
-                    value={setupForm.childAge}
+                    placeholder="e.g. 10"
+                    value={setupForm.childAge || ''}
                     onChange={e => setSetupForm({ ...setupForm, childAge: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none"
+                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none font-bold"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Allowance Amount (₹)</label>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 mb-1 block">Monthly Budget / Allowance (₹) *</label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
                   <input
                     type="number"
-                    min={0}
-                    placeholder="500"
-                    value={setupForm.allowanceAmount}
+                    min={100}
+                    required
+                    placeholder="e.g. 1000"
+                    value={setupForm.allowanceAmount || ''}
                     onChange={e => setSetupForm({ ...setupForm, allowanceAmount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none"
+                    className="w-full pl-8 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none font-bold"
                   />
                 </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-600 mb-1 block">Frequency</label>
-                  <select
-                    value={setupForm.allowanceFrequency}
-                    onChange={e => setSetupForm({ ...setupForm, allowanceFrequency: e.target.value as any })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-400 focus:outline-none"
-                  >
-                    <option value="Weekly">Weekly</option>
-                    <option value="Monthly">Monthly</option>
-                    <option value="Custom">Custom</option>
-                  </select>
-                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  This monthly budget will be split into 3 jars: 50% Spend (₹{Math.round((setupForm.allowanceAmount || 0) * 0.5)}), 35% Save (₹{Math.round((setupForm.allowanceAmount || 0) * 0.35)}), and 15% Give (₹{Math.round((setupForm.allowanceAmount || 0) * 0.15)}).
+                </p>
               </div>
 
               <div className="border-t pt-3 border-slate-100">
-                <p className="text-xs font-bold text-slate-700 mb-2">Initial Starting Balances (₹)</p>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-400 block">Spend Jar</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={setupForm.spendStart}
-                      onChange={e => setSetupForm({ ...setupForm, spendStart: Number(e.target.value) })}
-                      className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-400 block">Save Jar</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={setupForm.saveStart}
-                      onChange={e => setSetupForm({ ...setupForm, saveStart: Number(e.target.value) })}
-                      className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-semibold text-slate-400 block">Give & Grow</label>
-                    <input
-                      type="number"
-                      min={0}
-                      value={setupForm.giveStart}
-                      onChange={e => setSetupForm({ ...setupForm, giveStart: Number(e.target.value) })}
-                      className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-3 border-slate-100">
-                <div className="flex items-center gap-1 text-xs font-bold text-slate-700 mb-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 mb-1">
                   <Shield size={14} className="text-amber-500" />
                   Create 4-Digit Parent PIN *
                 </div>
@@ -241,7 +213,7 @@ export default function JuniorDashboard() {
                     placeholder="Enter 4 digits"
                     value={setupForm.pin}
                     onChange={e => setSetupForm({ ...setupForm, pin: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl text-center tracking-widest font-bold"
+                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl text-center tracking-widest font-bold"
                   />
                   <input
                     type="password"
@@ -250,14 +222,14 @@ export default function JuniorDashboard() {
                     placeholder="Confirm 4 digits"
                     value={setupForm.confirmPin}
                     onChange={e => setSetupForm({ ...setupForm, confirmPin: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl text-center tracking-widest font-bold"
+                    className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl text-center tracking-widest font-bold"
                   />
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl transition-colors text-sm shadow-md shadow-sky-500/20"
+                className="w-full py-3.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-2xl transition-colors text-sm shadow-md shadow-sky-500/20"
               >
                 Launch Junior Profile 🚀
               </button>
@@ -265,6 +237,7 @@ export default function JuniorDashboard() {
           </div>
         </div>
       )}
+
 
       {/* Balance hero */}
       <div className="bg-gradient-to-r from-sky-500 to-violet-600 rounded-3xl p-6 text-white relative overflow-hidden shadow-lg">

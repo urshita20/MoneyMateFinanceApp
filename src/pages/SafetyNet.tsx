@@ -1,93 +1,274 @@
-import { useState } from 'react'
-import { AlertTriangle, Shield, ChevronDown, ChevronUp, Zap } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { AlertTriangle, Shield, ChevronDown, ChevronUp, Zap, Edit3, Check, RefreshCw, Wallet, Target, Sparkles, Sliders } from 'lucide-react'
+import { dataStore } from '../services/dataStore'
 
-const liquidAssets = [
-  { label: 'Savings Account', amount: 120000, type: 'liquid' },
-  { label: 'Short-term FD (breakable)', amount: 80000, type: 'liquid' },
-  { label: 'Liquid Mutual Fund', amount: 45000, type: 'liquid' },
-]
+const DEFAULT_ESSENTIAL_CATS = ['Housing', 'Food & Dining', 'Groceries', 'Utilities', 'Health', 'Education']
 
-const monthlyEssentials = [
-  { label: 'Rent', amount: 25000, icon: '🏠' },
-  { label: 'Groceries & Food', amount: 8000, icon: '🥗' },
-  { label: 'Medical Insurance', amount: 3500, icon: '💊' },
-  { label: 'EMI (Home Loan)', amount: 12000, icon: '🏦' },
-  { label: 'Utilities (Power/Water)', amount: 2500, icon: '⚡' },
-]
-
-const liquidTotal = liquidAssets.reduce((s, a) => s + a.amount, 0)
-const essentialsTotal = monthlyEssentials.reduce((s, e) => s + e.amount, 0)
-const survivalMonths = Math.floor(liquidTotal / essentialsTotal)
-
-const waterfall = [
-  { step: 1, label: 'Liquid Savings', desc: 'Savings account balance — zero-friction access', amount: 120000, color: 'emerald' },
-  { step: 2, label: 'Break Short-term FD', desc: 'Penalty ~1% — minimal cost for urgent liquidity', amount: 80000, color: 'sky' },
-  { step: 3, label: 'Redeem Liquid Mutual Fund', desc: 'T+1 settlement — typically within 1 business day', amount: 45000, color: 'indigo' },
-  { step: 4, label: 'Cut Discretionary Subscriptions', desc: 'Cancel streaming, gym, and non-essential apps immediately', amount: 3500, color: 'amber' },
-  { step: 5, label: 'Secondary Assets (Gold/ETF)', desc: 'Sell partially if runway extends below 2 months', amount: 55000, color: 'rose' },
-]
-
-const nonEssentialCats = ['Dining Out', 'Streaming', 'Shopping', 'Entertainment', 'Gym']
+const CATEGORY_EMOJIS: Record<string, string> = {
+  'Housing': '🏠',
+  'Food & Dining': '🍕',
+  'Groceries': '🛒',
+  'Utilities': '⚡',
+  'Health': '💊',
+  'Education': '📚',
+  'Transport': '🚗',
+  'Shopping': '🛍️',
+  'Entertainment': '🎬',
+  'Salary': '💰',
+  'Freelance': '💼',
+  'Other': '📦',
+}
 
 export default function SafetyNet() {
+  const [summaryData, setSummaryData] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
+  const [profile, setProfile] = useState<any>(null)
+
+  // User persistent configuration
+  const [customLiquidFunds, setCustomLiquidFunds] = useState<number | null>(null)
+  const [essentialCategories, setEssentialCategories] = useState<string[]>(DEFAULT_ESSENTIAL_CATS)
+  const [editingLiquid, setEditingLiquid] = useState(false)
+  const [inputLiquid, setInputLiquid] = useState<string>('')
+
+  // Crisis Simulator States
   const [crisisMode, setCrisisMode] = useState(false)
   const [jobLoss, setJobLoss] = useState(false)
   const [medicalBill, setMedicalBill] = useState(false)
   const [medAmount, setMedAmount] = useState(50000)
   const [expanded, setExpanded] = useState<number | null>(null)
 
-  const adjustedLiquid = liquidTotal - (medicalBill ? medAmount : 0)
-  const inflow = jobLoss ? 0 : 85000
-  const adjustedRunway = inflow > 0
-    ? '∞ (income positive)'
-    : Math.max(0, Math.floor(adjustedLiquid / essentialsTotal)) + ' months'
+  const activeEmail = dataStore.getActiveEmail() || 'default'
+
+  const loadData = () => {
+    const summaryRes = dataStore.getDashboardSummary()
+    setSummaryData(summaryRes.summary)
+    setTransactions(summaryRes.transactions)
+    setGoals(summaryRes.goals)
+    setProfile(dataStore.getProfile())
+
+    // Load user liquid funds override
+    const storedLiquid = localStorage.getItem(`moneymate_liquid_funds_${activeEmail}`)
+    if (storedLiquid !== null && storedLiquid !== '') {
+      const val = parseFloat(storedLiquid)
+      if (!isNaN(val)) setCustomLiquidFunds(val)
+    }
+
+    // Load user essential category classifications
+    const storedEssentials = localStorage.getItem(`moneymate_essential_cats_${activeEmail}`)
+    if (storedEssentials) {
+      try {
+        setEssentialCategories(JSON.parse(storedEssentials))
+      } catch {
+        setEssentialCategories(DEFAULT_ESSENTIAL_CATS)
+      }
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const handleSaveLiquidFunds = () => {
+    const val = parseFloat(inputLiquid)
+    if (!isNaN(val) && val >= 0) {
+      setCustomLiquidFunds(val)
+      localStorage.setItem(`moneymate_liquid_funds_${activeEmail}`, val.toString())
+    }
+    setEditingLiquid(false)
+  }
+
+  const handleToggleEssential = (catName: string) => {
+    let updated: string[]
+    if (essentialCategories.includes(catName)) {
+      updated = essentialCategories.filter(c => c !== catName)
+    } else {
+      updated = [...essentialCategories, catName]
+    }
+    setEssentialCategories(updated)
+    localStorage.setItem(`moneymate_essential_cats_${activeEmail}`, JSON.stringify(updated))
+  }
+
+  // 1. LIQUID FUNDS COMPUTATION
+  const calculatedBalance = summaryData?.totalBalance || profile?.monthlyIncome || 0
+  const liquidTotal = customLiquidFunds !== null ? customLiquidFunds : calculatedBalance
+
+  // 2. ESSENTIAL vs DISCRETIONARY EXPENSE COMPUTATION FROM REAL TRANSACTIONS
+  const expenseTxs = (transactions || []).filter(t => t.type === 'expense' || t.type !== 'income')
+
+  const categoryTotals: Record<string, number> = {}
+  expenseTxs.forEach(t => {
+    const cat = t.category || 'Other'
+    categoryTotals[cat] = (categoryTotals[cat] || 0) + Number(t.amount || 0)
+  })
+
+  // Gather all category names found in user transactions or default categories
+  const allCategories = Array.from(new Set([...Object.keys(categoryTotals), ...DEFAULT_ESSENTIAL_CATS]))
+
+  let essentialsTotal = 0
+  let discretionaryTotal = 0
+
+  allCategories.forEach(cat => {
+    const amt = categoryTotals[cat] || 0
+    if (essentialCategories.includes(cat)) {
+      essentialsTotal += amt
+    } else {
+      discretionaryTotal += amt
+    }
+  })
+
+  // Fallback: If no expense transactions recorded yet, estimate essential burn from monthly profile/budget
+  if (essentialsTotal <= 0) {
+    if (profile?.monthlyBudget > 0) {
+      essentialsTotal = Math.round(profile.monthlyBudget * 0.7)
+      discretionaryTotal = Math.round(profile.monthlyBudget * 0.3)
+    } else if (profile?.monthlyIncome > 0) {
+      essentialsTotal = Math.round(profile.monthlyIncome * 0.5)
+      discretionaryTotal = Math.round(profile.monthlyIncome * 0.2)
+    } else {
+      essentialsTotal = 25000 // Minimal baseline when zero data exists
+    }
+  }
+
+  // 3. RUNWAY CALCULATIONS
+  const survivalMonthsNum = essentialsTotal > 0 ? liquidTotal / essentialsTotal : 0
+  const survivalMonthsFormatted = survivalMonthsNum >= 99 ? '99+' : survivalMonthsNum.toFixed(1)
+
+  // Simulation calculations
+  const adjustedLiquid = Math.max(0, liquidTotal - (medicalBill ? medAmount : 0))
+  const monthlyInflow = jobLoss ? 0 : summaryData?.monthlyIncome || profile?.monthlyIncome || 0
+
+  let adjustedRunway = ''
+  if (!jobLoss && monthlyInflow >= (crisisMode ? essentialsTotal : essentialsTotal + discretionaryTotal)) {
+    adjustedRunway = '∞ (income positive)'
+  } else {
+    const effectiveBurn = crisisMode ? essentialsTotal : essentialsTotal + discretionaryTotal
+    const simulatedMonths = effectiveBurn > 0 ? adjustedLiquid / effectiveBurn : 0
+    adjustedRunway = `${simulatedMonths.toFixed(1)} months`
+  }
+
+  const target6M = essentialsTotal * 6
+  const gapToTarget = Math.max(0, target6M - liquidTotal)
+
+  // Waterfall priority steps built from actual user data
+  const goalReservesTotal = (goals || []).reduce((sum, g) => sum + (g.savedAmount || 0), 0)
+  const waterfall = [
+    {
+      step: 1,
+      label: 'Liquid Savings & Bank Balance',
+      desc: 'Immediate zero-friction cash & checking balance available for emergency use.',
+      amount: liquidTotal,
+      color: 'emerald',
+    },
+    {
+      step: 2,
+      label: 'Pause Discretionary Spending',
+      desc: `Cancel non-essential expenses (${allCategories.filter(c => !essentialCategories.includes(c)).join(', ') || 'Shopping, Dining, Subscriptions'}).`,
+      amount: discretionaryTotal,
+      color: 'amber',
+    },
+    {
+      step: 3,
+      label: 'Active Goal Emergency Reserves',
+      desc: `Redeem accumulated deposits from active financial goals (${goals.length} active goals).`,
+      amount: goalReservesTotal,
+      color: 'sky',
+    },
+    {
+      step: 4,
+      label: 'Unallocated Budget Surplus',
+      desc: 'Unused monthly budget capacity available to reallocate.',
+      amount: Math.max(0, (profile?.monthlyBudget || 0) - essentialsTotal),
+      color: 'indigo',
+    },
+  ]
+
+  const nonEssentialCats = allCategories.filter(c => !essentialCategories.includes(c))
 
   return (
     <div className="max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Safety Net & Contingency</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Emergency survival runway and crisis simulation</p>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <Shield className="text-emerald-500" size={24} />
+            Safety Net & Contingency
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Emergency survival runway and crisis simulation based on your actual financial data
+          </p>
         </div>
         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border ${
-          survivalMonths >= 6 ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800/40 dark:text-emerald-400'
-            : survivalMonths >= 3 ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/40 dark:text-amber-400'
+          survivalMonthsNum >= 6 ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-800/40 dark:text-emerald-400'
+            : survivalMonthsNum >= 3 ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-800/40 dark:text-amber-400'
             : 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-900/20 dark:border-rose-800/40 dark:text-rose-400'
         }`}>
           <Shield size={14} />
-          {survivalMonths >= 6 ? 'Well Protected' : survivalMonths >= 3 ? 'Moderate Risk' : 'Critical — Act Now'}
+          {survivalMonthsNum >= 6 ? 'Well Protected' : survivalMonthsNum >= 3 ? 'Moderate Risk' : 'Critical — Act Now'}
         </div>
       </div>
 
-      {/* Survival Runway hero */}
+      {/* Liquid Survival Runway Hero */}
       <div className={`rounded-2xl p-6 relative overflow-hidden text-white ${
-        crisisMode ? 'bg-gradient-to-r from-rose-600 to-rose-800' : 'bg-gradient-to-r from-slate-800 to-slate-900'
+        crisisMode ? 'bg-gradient-to-r from-rose-600 via-rose-700 to-rose-900' : 'bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900'
       }`}>
         <div className="absolute inset-0 overflow-hidden">
-          <div className={`absolute top-0 left-1/3 w-64 h-32 rounded-full blur-3xl ${crisisMode ? 'bg-rose-400/20' : 'bg-emerald-500/8'}`} />
+          <div className={`absolute top-0 left-1/3 w-64 h-32 rounded-full blur-3xl ${crisisMode ? 'bg-rose-400/20' : 'bg-emerald-500/10'}`} />
         </div>
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
-            <p className="text-slate-300 text-sm font-medium mb-1">
-              {crisisMode ? '⚠️ SURVIVAL BUDGET MODE ACTIVE' : 'Liquid Survival Runway'}
-            </p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-slate-300 text-sm font-medium">
+                {crisisMode ? '⚠️ SURVIVAL BUDGET MODE ACTIVE' : 'Liquid Survival Runway'}
+              </p>
+              <button
+                onClick={() => {
+                  setInputLiquid(liquidTotal.toString())
+                  setEditingLiquid(!editingLiquid)
+                }}
+                className="text-xs bg-white/10 hover:bg-white/20 text-slate-200 px-2 py-0.5 rounded-lg flex items-center gap-1 transition-colors"
+                title="Edit liquid savings amount"
+              >
+                <Edit3 size={11} /> Edit Liquid Funds
+              </button>
+            </div>
+
+            {editingLiquid && (
+              <div className="flex items-center gap-2 my-2 bg-slate-800/90 p-2 rounded-xl border border-white/20">
+                <span className="text-xs text-slate-300">₹</span>
+                <input
+                  type="number"
+                  value={inputLiquid}
+                  onChange={e => setInputLiquid(e.target.value)}
+                  placeholder="Enter Liquid Savings"
+                  className="bg-slate-900 text-white text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 w-36 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                />
+                <button
+                  onClick={handleSaveLiquidFunds}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <Check size={12} /> Save
+                </button>
+              </div>
+            )}
+
             <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-6xl font-black text-white">{crisisMode ? adjustedRunway : `${survivalMonths}M`}</span>
+              <span className="text-6xl font-black text-white">{crisisMode ? adjustedRunway : `${survivalMonthsFormatted}M`}</span>
               {!crisisMode && <span className="text-slate-400 text-base">months of runway</span>}
             </div>
             <p className="text-slate-300 text-sm">
-              ₹{liquidTotal.toLocaleString()} liquid ÷ ₹{essentialsTotal.toLocaleString()}/mo non-negotiables
+              ₹{liquidTotal.toLocaleString('en-IN')} liquid ÷ ₹{essentialsTotal.toLocaleString('en-IN')}/mo non-negotiables
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+
+          <div className="grid grid-cols-2 gap-2 w-full md:w-auto">
             {[
-              { label: 'Liquid Assets', val: `₹${(liquidTotal / 1000).toFixed(0)}K` },
-              { label: 'Monthly Essentials', val: `₹${(essentialsTotal / 1000).toFixed(0)}K` },
-              { label: 'Buffer Target (6M)', val: `₹${((essentialsTotal * 6) / 1000).toFixed(0)}K` },
-              { label: 'Gap to Target', val: `₹${Math.max(0, (essentialsTotal * 6 - liquidTotal) / 1000).toFixed(0)}K` },
+              { label: 'Liquid Assets', val: `₹${(liquidTotal / 1000).toFixed(1)}K` },
+              { label: 'Monthly Essentials', val: `₹${(essentialsTotal / 1000).toFixed(1)}K` },
+              { label: 'Buffer Target (6M)', val: `₹${(target6M / 1000).toFixed(1)}K` },
+              { label: 'Gap to Target', val: `₹${(gapToTarget / 1000).toFixed(1)}K` },
             ].map(s => (
-              <div key={s.label} className="bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-center">
+              <div key={s.label} className="bg-white/10 border border-white/20 rounded-xl px-4 py-2.5 text-center min-w-[120px]">
                 <p className="text-sm font-black text-white">{s.val}</p>
                 <p className="text-xs text-slate-300 mt-0.5">{s.label}</p>
               </div>
@@ -100,7 +281,7 @@ export default function SafetyNet() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Crisis Simulator</h2>
 
-        <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           <button
             onClick={() => setJobLoss(j => !j)}
             className={`p-4 rounded-xl border-2 text-left transition-all ${
@@ -115,8 +296,8 @@ export default function SafetyNet() {
                 {jobLoss && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
               </div>
             </div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white">Sudden Job Loss</p>
-            <p className="text-xs text-slate-400 mt-0.5">Zero income scenario — essentials only</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">Sudden Job / Income Loss</p>
+            <p className="text-xs text-slate-400 mt-0.5">Zero income scenario — essential spending only</p>
           </button>
 
           <div className={`p-4 rounded-xl border-2 transition-all ${
@@ -133,7 +314,7 @@ export default function SafetyNet() {
                 {medicalBill && <div className="w-2.5 h-2.5 rounded-full bg-white" />}
               </button>
             </div>
-            <p className="text-sm font-bold text-slate-900 dark:text-white mb-2">Emergency Medical Bill</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white mb-2">Emergency Medical Expense</p>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium">₹</span>
               <input
@@ -154,7 +335,7 @@ export default function SafetyNet() {
               Simulated Runway: {adjustedRunway}
             </div>
             <p className="text-xs text-rose-600 dark:text-rose-400">
-              Liquid reserves: ₹{Math.max(0, adjustedLiquid).toLocaleString()} — {jobLoss ? 'zero income' : 'income intact'} scenario
+              Simulated liquid reserves: ₹{Math.max(0, adjustedLiquid).toLocaleString('en-IN')} — {jobLoss ? 'zero income' : 'income intact'} scenario
             </p>
           </div>
         )}
@@ -175,11 +356,15 @@ export default function SafetyNet() {
           <div className="mt-3 p-3 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800/40 rounded-xl">
             <p className="text-xs font-semibold text-rose-700 dark:text-rose-400 mb-2">Non-essential categories — PAUSED:</p>
             <div className="flex flex-wrap gap-2">
-              {nonEssentialCats.map(c => (
-                <span key={c} className="text-xs bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40 px-2.5 py-1 rounded-full line-through">
-                  {c}
-                </span>
-              ))}
+              {nonEssentialCats.length > 0 ? (
+                nonEssentialCats.map(c => (
+                  <span key={c} className="text-xs bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40 px-2.5 py-1 rounded-full line-through">
+                    {c}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-rose-500 italic">No non-essential categories marked.</span>
+              )}
             </div>
           </div>
         )}
@@ -211,7 +396,7 @@ export default function SafetyNet() {
                   <p className="text-sm font-semibold text-slate-900 dark:text-white">{item.label}</p>
                   {expanded === idx && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{item.desc}</p>}
                 </div>
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">₹{item.amount.toLocaleString()}</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">₹{item.amount.toLocaleString('en-IN')}</span>
                 {expanded === idx ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
               </button>
             </div>
@@ -219,22 +404,50 @@ export default function SafetyNet() {
         </div>
       </div>
 
-      {/* Monthly essentials breakdown */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm">
-        <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Non-Negotiable Monthly Expenses</h2>
+      {/* Monthly Essentials Breakdown */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Non-Negotiable vs Discretionary Expenses</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Click any category tag below to toggle between Essential (non-negotiable) and Discretionary
+            </p>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          {monthlyEssentials.map(e => (
-            <div key={e.label} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
-              <div className="flex items-center gap-2.5">
-                <span className="text-lg">{e.icon}</span>
-                <span className="text-sm text-slate-700 dark:text-slate-300">{e.label}</span>
+          {allCategories.map(cat => {
+            const amt = categoryTotals[cat] || 0
+            const isEssential = essentialCategories.includes(cat)
+            const emoji = CATEGORY_EMOJIS[cat] || '🏷️'
+
+            return (
+              <div key={cat} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-lg">{emoji}</span>
+                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{cat}</span>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">₹{amt.toLocaleString('en-IN')}</span>
+                  <button
+                    onClick={() => handleToggleEssential(cat)}
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-all ${
+                      isEssential
+                        ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-600'
+                    }`}
+                  >
+                    {isEssential ? 'Essential' : 'Discretionary'}
+                  </button>
+                </div>
               </div>
-              <span className="text-sm font-bold text-slate-900 dark:text-white">₹{e.amount.toLocaleString()}</span>
-            </div>
-          ))}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 dark:bg-slate-700 text-white">
-            <span className="text-sm font-bold">Total Monthly Essentials</span>
-            <span className="text-sm font-black">₹{essentialsTotal.toLocaleString()}</span>
+            )
+          })}
+
+          <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 dark:bg-slate-700 text-white mt-4">
+            <span className="text-sm font-bold">Total Non-Negotiable Monthly Burn</span>
+            <span className="text-sm font-black">₹{essentialsTotal.toLocaleString('en-IN')}</span>
           </div>
         </div>
       </div>

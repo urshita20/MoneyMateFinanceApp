@@ -517,7 +517,6 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
         <div className="flex flex-wrap gap-3">
           {[
             { label: 'Add Expense', icon: Plus, style: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/25', page: 'add-expense' as Page },
-            { label: 'Scan Receipt (OCR)', icon: Scan, style: 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30', page: 'ocr' as Page },
             { label: 'Ask AI Copilot', icon: Sparkles, style: 'bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30', page: 'chat' as Page },
             { label: 'Time Machine', icon: TrendingUp, style: 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30', page: 'time-machine' as Page },
           ].map(action => (

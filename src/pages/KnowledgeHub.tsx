@@ -120,9 +120,12 @@ export default function KnowledgeHub() {
               <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2 leading-snug group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                 {article.title}
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
                 {article.summary}
               </p>
+              {article.source && (
+                <p className="text-[10px] text-slate-400 font-medium mb-3">Source: {article.source}</p>
+              )}
               <button className={`flex items-center gap-1.5 text-xs font-semibold ${colors.text} hover:underline`}>
                 Read more <ExternalLink size={11} />
               </button>

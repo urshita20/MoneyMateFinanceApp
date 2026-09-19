@@ -33,8 +33,6 @@ const sections = [
   {
     label: 'Investments',
     items: [
-      { icon: BarChart2,   label: 'Portfolio',         page: 'portfolio' as Page },
-      { icon: Globe,       label: 'Market',            page: 'market' as Page },
       { icon: Lightbulb,   label: 'Invest Ideas',      page: 'investments' as Page },
     ],
   },
@@ -42,7 +40,6 @@ const sections = [
     label: 'AI Copilot',
     items: [
       { icon: Sparkles,       label: 'AI Insights',   page: 'ai-dashboard' as Page },
-      { icon: Activity,       label: 'Analytics',      page: 'insights' as Page },
       { icon: MessageSquare,  label: 'AI Assistant',   page: 'chat' as Page },
       { icon: Scan,           label: 'OCR Scanner',    page: 'ocr' as Page },
     ],

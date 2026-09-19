@@ -42,6 +42,9 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
         if (res.success && res.user) {
           if (onAuthSuccess) onAuthSuccess(res.user)
           onNav('dashboard')
+        } else if (res.accountExists || (res.message && res.message.toLowerCase().includes('already exists'))) {
+          setErrorMsg('An account with this email already exists.')
+          setMode('login')
         } else {
           setErrorMsg(res.message || 'Registration failed')
         }

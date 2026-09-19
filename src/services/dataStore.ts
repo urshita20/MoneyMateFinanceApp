@@ -269,6 +269,106 @@ class DataStoreManager {
     return newTx;
   }
 
+  public extractOcrAmount(rawText: string): string {
+    if (!rawText) return '';
+    const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+
+    // High Priority Keywords (grand totals / bill amounts / total due)
+    const highPriorityKeywords = [
+      /total\s+due/i,
+      /bill\s+amt/i,
+      /bill\s+amount/i,
+      /grand\s+total/i,
+      /total\s+amount/i,
+      /net\s+amount/i,
+      /net\s+payable/i,
+      /amount\s+payable/i,
+      /total\s+payable/i,
+      /amount\s+due/i,
+      /total\s+paid/i,
+      /amount\s+paid/i,
+      /final\s+total/i,
+      /\btotal\b/i,
+    ];
+
+    const extractNumFromLine = (line: string): number | null => {
+      // Find currency numbers like 504.00, 504, 1,250.00
+      const matches = line.match(/(?:₹|rs\.?|inr)?\s*([0-9,]+(?:\.[0-9]{1,2})?)/gi);
+      if (!matches) return null;
+
+      let bestVal: number | null = null;
+      for (const m of matches) {
+        const clean = m.replace(/[^0-9.]/g, '');
+        const val = parseFloat(clean);
+        if (!isNaN(val) && val > 0 && val < 5000000) {
+          // Ignore 4-digit years like 2024, 2025, 2026 if no decimal point
+          if (val >= 2024 && val <= 2030 && !clean.includes('.')) continue;
+          bestVal = val;
+        }
+      }
+      return bestVal;
+    };
+
+    // 1. Scan line-by-line for high priority total keywords (bottom-up)
+    for (const kw of highPriorityKeywords) {
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i];
+        if (kw.test(line)) {
+          const val = extractNumFromLine(line);
+          if (val !== null && val > 0) {
+            return val.toString();
+          }
+        }
+      }
+    }
+
+    // 2. Generic regex search across full text
+    const genericTotalRegexes = [
+      /(?:total|bill\s+amt|grand\s+total|amount\s+due|net\s+payable|amount)\s*[:=₹Rs\.\s]*([0-9,]+(?:\.[0-9]{1,2})?)/gi,
+      /(?:₹|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]{1,2})?)/gi,
+    ];
+
+    const candidates: number[] = [];
+    for (const reg of genericTotalRegexes) {
+      let match;
+      while ((match = reg.exec(rawText)) !== null) {
+        if (match[1]) {
+          const clean = match[1].replace(/,/g, '');
+          const val = parseFloat(clean);
+          if (!isNaN(val) && val > 0 && val < 5000000) {
+            if (val >= 2024 && val <= 2030 && !clean.includes('.')) continue;
+            candidates.push(val);
+          }
+        }
+      }
+    }
+
+    if (candidates.length > 0) {
+      return Math.max(...candidates).toString();
+    }
+
+    // 3. Fallback: Find largest decimal/positive number in lines
+    const allNums: number[] = [];
+    for (const line of lines) {
+      const nums = line.match(/\b[0-9]+(?:\.[0-9]{1,2})?\b/g);
+      if (nums) {
+        for (const numStr of nums) {
+          const val = parseFloat(numStr);
+          if (!isNaN(val) && val > 0 && val < 5000000) {
+            if (val >= 2024 && val <= 2030 && !numStr.includes('.')) continue;
+            allNums.push(val);
+          }
+        }
+      }
+    }
+
+    if (allNums.length > 0) {
+      return Math.max(...allNums).toString();
+    }
+
+    return '';
+  }
+
   public categorizeMerchant(merchant: string, description: string = '', amount: number = 0, type: string = 'expense'): { category: string; emoji: string } {
     if (type === 'income') {
       return { category: 'Salary', emoji: '💰' };

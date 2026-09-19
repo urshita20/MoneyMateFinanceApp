@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { Upload, CheckCircle, Edit2, X, AlertTriangle, FileText } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 import Tesseract from 'tesseract.js'
 
 interface OCRScannerProps {
@@ -101,24 +102,8 @@ export default function OCRScanner({ onNav }: OCRScannerProps) {
         }
       }
 
-      // Infer amount
-      let foundAmount = ''
-      const amountRegex = /(?:total|amount|due|paid|bal|inr|rs|₹)\s*[:=]?\s*([0-9,]+(?:\.[0-9]{1,2})?)/i
-      const match = rawText.match(amountRegex)
-      if (match && match[1]) {
-        foundAmount = match[1].replace(/,/g, '')
-      } else {
-        // Find numbers
-        const numbers = rawText.match(/\b\d+(?:\.\d{1,2})?\b/g)
-        if (numbers) {
-          const validNums = numbers
-            .map(n => parseFloat(n))
-            .filter(n => !isNaN(n) && n > 0 && n < 100000 && !/20[2-3][0-9]/.test(String(n)))
-          if (validNums.length > 0) {
-            foundAmount = String(Math.max(...validNums))
-          }
-        }
-      }
+      // Infer amount using robust multi-pass extraction
+      const foundAmount = dataStore.extractOcrAmount(rawText)
 
       setMerchant(foundMerchant)
       setAmount(foundAmount)

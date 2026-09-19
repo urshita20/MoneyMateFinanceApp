@@ -73,22 +73,8 @@ export default function ReceiptImportModal({ isOpen, onClose, onImportComplete }
           merchantName = lines[1]
         }
 
-        // Parse Amount (find highest currency value or TOTAL match)
-        let extractedAmount = ''
-        const amountRegex = /(?:total|amount|net|paid|rs\.?|₹)\s*:?\s*([0-9,]+\.?[0-9]*)/gi
-        let match = amountRegex.exec(text)
-        if (match && match[1]) {
-          extractedAmount = match[1].replace(/,/g, '')
-        } else {
-          // Fallback: search for numbers with decimals
-          const numbers = text.match(/[0-9]+\.[0-9]{2}/g)
-          if (numbers && numbers.length > 0) {
-            const parsedNums = numbers.map(n => parseFloat(n)).filter(n => !isNaN(n))
-            if (parsedNums.length > 0) {
-              extractedAmount = Math.max(...parsedNums).toString()
-            }
-          }
-        }
+        // Parse Amount using robust multi-pass extraction
+        let extractedAmount = dataStore.extractOcrAmount(text)
 
         // Parse Date (YYYY-MM-DD, DD/MM/YYYY, or DD-MM-YYYY)
         let extractedDate = new Date().toISOString().split('T')[0]

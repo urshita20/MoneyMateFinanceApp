@@ -382,39 +382,119 @@ class DataStoreManager {
     return '';
   }
 
+  // --- USER LEARNED CATEGORY CORRECTIONS ---
+  private getLearnedCategories(): Record<string, string> {
+    try {
+      const stored = localStorage.getItem('moneymate_learned_categories');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  public learnUserCategory(merchant: string, category: string) {
+    if (!merchant || !category || category === 'Uncategorized') return;
+    try {
+      const learned = this.getLearnedCategories();
+      const normKey = merchant.toLowerCase().trim();
+      learned[normKey] = category;
+      localStorage.setItem('moneymate_learned_categories', JSON.stringify(learned));
+    } catch (e) {
+      console.warn('Could not save learned category', e);
+    }
+  }
+
   public categorizeMerchant(merchant: string, description: string = '', amount: number = 0, type: string = 'expense'): { category: string; emoji: string } {
     if (type === 'income') {
+      const incText = `${merchant} ${description}`.toLowerCase();
+      if (/interest|div|dividend|int\.pd/i.test(incText)) {
+        return { category: 'Freelance', emoji: '📈' };
+      }
       return { category: 'Salary', emoji: '💰' };
     }
 
-    const text = `${merchant} ${description}`.toLowerCase();
+    const text = `${merchant} ${description}`.toLowerCase().trim();
+    if (!text) return { category: 'Other', emoji: '📦' };
 
-    if (/swiggy|zomato|dominos|pizza|mcdonald|starbucks|cafe|restaurant|diner|food|eatery|burger|kfc|chai|baking|bakery/i.test(text)) {
+    // 1. Check User Learned Corrections
+    const learned = this.getLearnedCategories();
+    for (const key in learned) {
+      if (text.includes(key) || key.includes(text)) {
+        const userCat = learned[key];
+        const emojiMap: Record<string, string> = {
+          'Food & Dining': '🍕',
+          'Transport': '🚗',
+          'Shopping': '🛍️',
+          'Utilities': '⚡',
+          'Groceries': '🛒',
+          'Health': '💊',
+          'Entertainment': '🎬',
+          'Education': '📚',
+          'Housing': '🏠',
+          'Salary': '💰',
+          'Freelance': '💼',
+          'Other': '🏷️',
+        };
+        return { category: userCat, emoji: emojiMap[userCat] || '🏷️' };
+      }
+    }
+
+    // 2. Comprehensive Heuristic Patterns for Bank Narrations & Merchant Names
+    // Food & Dining
+    if (/swiggy|zomato|ccd|cafe|coffee|day|starbucks|mcdonald|mcd\b|kfc|domino|pizza|diner|restaurant|canteen|eatery|baking|bakery|biryani|burger|lunch|dinner|breakfast|tea\b|chai\b|bar\b|pub\b|bistro|haldiram|bikanervala|behrouz|faasos|ovenstory|subway|dunkin|taco|barbeque|bbq|sweet|food/i.test(text)) {
       return { category: 'Food & Dining', emoji: '🍕' };
     }
-    if (/uber|ola|rapido|metro|cab|taxi|transit|bus|train|irctc|fuel|petrol|shell|hpcl|bpcl|toll/i.test(text)) {
+
+    // Transport
+    if (/uber|ola|rapido|metro|bmrtc|dmrc|railway|irctc|train|bus|redbus|abhibus|cab|taxi|auto|petrol|fuel|diesel|shell|hpcl|bpcl|iocl|oil|toll|fastag|park\+|parking|airline|indigo|air india|spicejet|vistara|akasa|ride/i.test(text)) {
       return { category: 'Transport', emoji: '🚗' };
     }
-    if (/amazon|flipkart|myntra|ajio|zara|h&m|decathlon|store|retail|mall|shopping|meesho|nykaa/i.test(text)) {
+
+    // Shopping
+    if (/amazon|amzn|mktp|flipkart|myntra|ajio|meesho|nykaa|zara|h&m|hnm|decathlon|uniqlo|trends|shoppers|pantaloons|westside|max\b|tata cliq|croma|vijay sales|reliance digital|apple|lenskart|fashion|clothing|footwear|store|mall|bazaar|pos txn|retail/i.test(text)) {
       return { category: 'Shopping', emoji: '🛍️' };
     }
-    if (/electricity|power|water|gas|utility|bescom|tata power|airtel|jio|vi|broadband|recharge|dth/i.test(text)) {
+
+    // Utilities
+    if (/electricity|bescom|tatapower|tata power|cesc|uppcl|mseb|torrent|power|water|jal|gas|indane|hp gas|bharat gas|utility|airtel|jio|vi\b|vodafone|idea|broadband|act fibernet|bsnl|recharge|dth|tata play|dish tv|sun direct/i.test(text)) {
       return { category: 'Utilities', emoji: '⚡' };
     }
-    if (/blinkit|zepto|instamart|bigbasket|grofers|dmart|supermarket|grocery|mart|spencer|nature/i.test(text)) {
+
+    // Groceries
+    if (/blinkit|zepto|instamart|bigbasket|grofers|dmart|supermarket|grocery|hypermarket|spencer|more megastore|nature basket|reliance fresh|milk|dairy|country delight|freshtohome|licious|mart/i.test(text)) {
       return { category: 'Groceries', emoji: '🛒' };
     }
-    if (/pharmacy|apollo|1mg|netmeds|hospital|doctor|clinic|medical|health|diagnostic|lab/i.test(text)) {
+
+    // Health / Healthcare
+    if (/pharmacy|apollo|1mg|netmeds|pharmeasy|hospital|doctor|clinic|medical|health|diagnostic|lab|pathology|dr\.|medplus|practo|cult\.fit|gym|fitness/i.test(text)) {
       return { category: 'Health', emoji: '💊' };
     }
-    if (/netflix|spotify|cinema|pvr|inox|movie|bookmyshow|hotstar|prime|youtube|game|steam/i.test(text)) {
+
+    // Entertainment
+    if (/netflix|spotify|pvr|inox|cinepolis|movie|cinema|bookmyshow|bms|hotstar|prime video|youtube|premium|game|steam|playstation|xbox|nintendo|apple music|gaana|saavn|wynk|event/i.test(text)) {
       return { category: 'Entertainment', emoji: '🎬' };
     }
-    if (/udemy|coursera|school|college|tuition|books|stationery|course|exam/i.test(text)) {
+
+    // Education
+    if (/udemy|coursera|unacademy|byju|simplilearn|upgrad|school|college|university|tuition|books|stationery|course|exam|fee|fees|coaching|library/i.test(text)) {
       return { category: 'Education', emoji: '📚' };
     }
 
-    return { category: 'Uncategorized', emoji: '📦' };
+    // Housing
+    if (/rent|landlord|society|maintenance|housing|apartment|flat|brokerage|deposit/i.test(text)) {
+      return { category: 'Housing', emoji: '🏠' };
+    }
+
+    // Smart Keyword Fallbacks for Bank Narrations
+    if (/pos\s*txn|atm\s*wdl|cash\s*wdl/i.test(text)) {
+      return { category: 'Other', emoji: '💳' };
+    }
+
+    if (/upi|neft|imps|rtgs|ach|bil/i.test(text)) {
+      return { category: 'Other', emoji: '📱' };
+    }
+
+    return { category: 'Other', emoji: '📦' };
   }
 
   public checkDuplicate(tx: { merchant: string; amount: number; date: string; externalTransactionId?: string }): { isDuplicate: boolean; existingTx?: TransactionItem } {

@@ -159,11 +159,12 @@ export default function BankStatementImportModal({ isOpen, onClose, onImportComp
       if (amount <= 0) return
 
       // Categorization
-      let catObj = { category: 'Uncategorized', emoji: '📦' }
+      let catObj = { category: 'Other', emoji: '📦' }
       if (categoryRaw && CATEGORIES.includes(categoryRaw)) {
         catObj = { category: categoryRaw, emoji: '🏷️' }
       } else {
-        catObj = dataStore.categorizeMerchant(merchantVal, '', amount, type)
+        const fullRowText = Object.values(row).join(' ')
+        catObj = dataStore.categorizeMerchant(merchantVal, fullRowText, amount, type)
       }
 
       // Check duplicates

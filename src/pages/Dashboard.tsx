@@ -67,6 +67,43 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
     }))
     setCategories(catList)
 
+    // Compute Monthly Trends (Income vs Expenses) from available transactions
+    const monthMap: Record<string, { income: number; expense: number }> = {}
+    local.transactions.forEach(t => {
+      let d = new Date(t.date)
+      if (isNaN(d.getTime())) d = new Date()
+      const mStr = d.toLocaleString('en-US', { month: 'short' })
+      if (!monthMap[mStr]) monthMap[mStr] = { income: 0, expense: 0 }
+      if (t.type === 'income') {
+        monthMap[mStr].income += t.amount
+      } else {
+        monthMap[mStr].expense += t.amount
+      }
+    })
+    const computedMonthly = Object.keys(monthMap).map(m => ({
+      month: m,
+      income: monthMap[m].income,
+      expense: monthMap[m].expense,
+    }))
+    setMonthlyTrends(computedMonthly)
+
+    // Compute Weekly Trends from available expense transactions
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const dayMap: Record<string, number> = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 }
+    local.transactions.filter(t => t.type === 'expense').forEach(t => {
+      let d = new Date(t.date)
+      if (isNaN(d.getTime())) d = new Date()
+      const dayName = daysOfWeek[d.getDay()]
+      if (dayName && dayMap[dayName] !== undefined) {
+        dayMap[dayName] += t.amount
+      }
+    })
+    const computedWeekly = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => ({
+      day,
+      amount: dayMap[day],
+    }))
+    setWeeklyTrends(computedWeekly)
+
     setLoading(false)
 
     // Background sync with API and API analytics

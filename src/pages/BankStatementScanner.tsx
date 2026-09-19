@@ -157,11 +157,12 @@ export default function BankStatementScanner({ onNav }: BankStatementScannerProp
 
       if (amount <= 0) return
 
-      let catObj = { category: 'Uncategorized', emoji: '📦' }
+      let catObj = { category: 'Other', emoji: '📦' }
       if (categoryRaw && CATEGORIES.includes(categoryRaw)) {
         catObj = { category: categoryRaw, emoji: '🏷️' }
       } else {
-        catObj = dataStore.categorizeMerchant(merchantVal, '', amount, type)
+        const fullRowText = Object.values(row).join(' ')
+        catObj = dataStore.categorizeMerchant(merchantVal, fullRowText, amount, type)
       }
 
       const dupCheck = dataStore.checkDuplicate({

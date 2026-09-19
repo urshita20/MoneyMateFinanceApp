@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Sparkles, CheckCircle, Plus, Edit2, Target } from 'lucide-react'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 import type { Page } from '../types'
 
 interface BudgetProps {
@@ -21,16 +22,16 @@ export default function Budget({ onNav }: BudgetProps) {
 
   const loadBudgets = () => {
     setLoading(true)
-    Promise.all([
-      api.analytics.getSummary(),
-      api.budgets.getAll(),
-    ])
-      .then(([sumRes, budgetRes]) => {
-        if (sumRes.success) setSummary(sumRes.summary)
-        if (budgetRes.success && budgetRes.budgets) setCategoryBudgets(budgetRes.budgets)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    const local = dataStore.getDashboardSummary()
+    setSummary(local.summary)
+    setCategoryBudgets(local.budgets)
+    setLoading(false)
+
+    dataStore.syncWithBackend().then(() => {
+      const updated = dataStore.getDashboardSummary()
+      setSummary(updated.summary)
+      setCategoryBudgets(updated.budgets)
+    }).catch(console.warn)
   }
 
   useEffect(() => {
@@ -41,34 +42,39 @@ export default function Budget({ onNav }: BudgetProps) {
     const val = parseFloat(editOverallInput)
     if (isNaN(val) || val < 0) return
 
-    try {
-      await api.auth.setup({
-        monthlyIncome: summary?.monthlyIncome || 0,
-        monthlyBudget: val,
-        savingsTarget: summary?.savingsTarget || 0,
-      })
-      setIsEditingOverall(false)
-      loadBudgets()
-    } catch (err) {
-      console.error('Error saving budget:', err)
-    }
+    dataStore.updateProfile({
+      monthlyIncome: summary?.monthlyIncome || 0,
+      monthlyBudget: val,
+      savingsTarget: summary?.savingsTarget || 0,
+    })
+
+    setIsEditingOverall(false)
+    loadBudgets()
+
+    api.auth.setup({
+      monthlyIncome: summary?.monthlyIncome || 0,
+      monthlyBudget: val,
+      savingsTarget: summary?.savingsTarget || 0,
+    }).catch(console.warn)
   }
 
   const handleCreateCategoryBudget = async () => {
     const amount = parseFloat(newBudgetAmount)
     if (!amount || amount <= 0) return
 
-    try {
-      await api.budgets.create({
-        category: newBudgetCategory,
-        budgetAmount: amount,
-      })
-      setShowAddModal(false)
-      setNewBudgetAmount('')
-      loadBudgets()
-    } catch (err) {
-      console.error('Error creating category budget:', err)
-    }
+    dataStore.addCategoryBudget({
+      category: newBudgetCategory,
+      budgetAmount: amount,
+    })
+
+    setShowAddModal(false)
+    setNewBudgetAmount('')
+    loadBudgets()
+
+    api.budgets.create({
+      category: newBudgetCategory,
+      budgetAmount: amount,
+    }).catch(console.warn)
   }
 
   const monthlyBudget = summary?.monthlyBudget || 0

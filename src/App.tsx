@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Page } from './types'
 import { api } from './services/api'
+import { dataStore } from './services/dataStore'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import Onboarding from './pages/Onboarding'
@@ -48,6 +49,15 @@ export default function App() {
       api.auth.getMe().then(res => {
         if (res.success && res.user) {
           setUser(res.user)
+          dataStore.setActiveUser(res.user.email, res.user.name)
+          if (res.user.monthlyIncome > 0 || res.user.monthlyBudget > 0) {
+            dataStore.updateProfile({
+              monthlyIncome: res.user.monthlyIncome,
+              monthlyBudget: res.user.monthlyBudget,
+              savingsTarget: res.user.savingsTarget,
+            })
+          }
+          dataStore.syncWithBackend()
         }
       }).catch(console.error)
     }

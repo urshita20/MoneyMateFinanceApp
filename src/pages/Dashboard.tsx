@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 import type { Page } from '../types'
 
 interface DashboardProps {
@@ -33,24 +34,53 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
 
   const loadData = () => {
     setLoading(true)
-    Promise.all([
-      api.analytics.getSummary(),
-      api.analytics.getSpendingByCategory(),
-      api.analytics.getMonthlyTrends(),
-      api.analytics.getWeeklyTrends(),
-      api.transactions.getAll(),
-      api.goals.getAll(),
-    ])
-      .then(([sumRes, catRes, monthRes, weekRes, txRes, goalRes]) => {
-        if (sumRes.success) setSummary(sumRes.summary)
-        if (catRes.success && catRes.categories) setCategories(catRes.categories)
-        if (monthRes.success && monthRes.monthlyData) setMonthlyTrends(monthRes.monthlyData)
-        if (weekRes.success && weekRes.weeklyTrend) setWeeklyTrends(weekRes.weeklyTrend)
-        if (txRes.success && txRes.transactions) setTxList(txRes.transactions)
-        if (goalRes.success && goalRes.goals) setGoalsList(goalRes.goals)
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    const local = dataStore.getDashboardSummary()
+    setSummary(local.summary)
+    setTxList(local.transactions)
+    setGoalsList(local.goals)
+
+    // Calculate category breakdown from local transactions
+    const totalSpent = local.summary.monthlyExpense
+    const catMap: Record<string, number> = {}
+    const categoryColors: Record<string, string> = {
+      'Food & Dining': '#F97316',
+      'Housing': '#6366F1',
+      'Transport': '#3B82F6',
+      'Shopping': '#EC4899',
+      'Entertainment': '#8B5CF6',
+      'Health': '#10B981',
+      'Utilities': '#F59E0B',
+      'Groceries': '#10B981',
+      'Education': '#6366F1',
+      'Other': '#64748B',
+    }
+
+    local.transactions.filter(t => t.type === 'expense').forEach(t => {
+      catMap[t.category] = (catMap[t.category] || 0) + t.amount
+    })
+
+    const catList = Object.keys(catMap).map(cat => ({
+      name: cat,
+      amount: catMap[cat],
+      value: totalSpent > 0 ? Math.round((catMap[cat] / totalSpent) * 100) : 0,
+      color: categoryColors[cat] || '#64748B',
+    }))
+    setCategories(catList)
+
+    setLoading(false)
+
+    // Background sync with API and API analytics
+    dataStore.syncWithBackend().then(() => {
+      Promise.all([
+        api.analytics.getSpendingByCategory().catch(() => null),
+        api.analytics.getMonthlyTrends().catch(() => null),
+        api.analytics.getWeeklyTrends().catch(() => null),
+      ]).then(([catRes, monthRes, weekRes]) => {
+        if (catRes?.success && catRes.categories?.length > 0) setCategories(catRes.categories)
+        if (monthRes?.success && monthRes.monthlyData?.length > 0) setMonthlyTrends(monthRes.monthlyData)
+        if (weekRes?.success && weekRes.weeklyTrend?.length > 0) setWeeklyTrends(weekRes.weeklyTrend)
+      }).catch(console.warn)
+    }).catch(console.warn)
   }
 
   useEffect(() => {

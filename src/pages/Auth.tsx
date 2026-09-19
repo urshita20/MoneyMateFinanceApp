@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Eye, EyeOff, TrendingUp, ArrowRight, ShieldCheck, BarChart3, Bot } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 
 interface AuthProps {
   onNav: (p: Page) => void
@@ -40,10 +41,13 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
       if (mode === 'signup') {
         const res = await api.auth.register(form.name || 'New User', form.email, form.password)
         if (res.success && res.user) {
+          dataStore.setActiveUser(res.user.email, res.user.name)
+          dataStore.syncWithBackend()
           if (onAuthSuccess) onAuthSuccess(res.user)
           onNav('dashboard')
         } else if (res.accountExists || (res.message && res.message.toLowerCase().includes('already exists'))) {
-          setErrorMsg('An account with this email already exists.')
+          setErrorMsg('An account with this email already exists. Switched to Sign In.')
+          dataStore.setActiveUser(form.email, form.name)
           setMode('login')
         } else {
           setErrorMsg(res.message || 'Registration failed')
@@ -51,6 +55,15 @@ export default function Auth({ onNav, initial, onAuthSuccess }: AuthProps) {
       } else {
         const res = await api.auth.login(form.email, form.password)
         if (res.success && res.user) {
+          dataStore.setActiveUser(res.user.email, res.user.name)
+          if (res.user.monthlyIncome > 0 || res.user.monthlyBudget > 0) {
+            dataStore.updateProfile({
+              monthlyIncome: res.user.monthlyIncome,
+              monthlyBudget: res.user.monthlyBudget,
+              savingsTarget: res.user.savingsTarget,
+            })
+          }
+          dataStore.syncWithBackend()
           if (onAuthSuccess) onAuthSuccess(res.user)
           onNav('dashboard')
         } else {

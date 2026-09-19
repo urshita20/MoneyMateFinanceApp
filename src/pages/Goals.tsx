@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Target, Calendar, TrendingUp, Trash2, ArrowUpRight } from 'lucide-react'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 import type { Page } from '../types'
 
 function CircleProgress({ pct, color }: { pct: number; color: string }) {
@@ -45,14 +46,13 @@ export default function Goals() {
 
   const fetchGoals = () => {
     setLoading(true)
-    api.goals.getAll()
-      .then(res => {
-        if (res.success && res.goals) {
-          setGoalsList(res.goals)
-        }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    const localGoals = dataStore.getGoals()
+    setGoalsList(localGoals)
+    setLoading(false)
+
+    dataStore.syncWithBackend().then(() => {
+      setGoalsList(dataStore.getGoals())
+    }).catch(console.warn)
   }
 
   useEffect(() => {
@@ -62,46 +62,46 @@ export default function Goals() {
   const handleCreateGoal = async () => {
     if (!name || !targetAmount) return
 
-    try {
-      await api.goals.create({
-        name,
-        targetAmount: parseFloat(targetAmount),
-        deadline: deadline || 'Dec 2026',
-        emoji,
-      })
-      setShowAdd(false)
-      setName('')
-      setTargetAmount('')
-      setSavedAmount('')
-      setDeadline('')
-      fetchGoals()
-    } catch (err) {
-      console.error('Error creating goal:', err)
-    }
+    dataStore.addGoal({
+      name,
+      targetAmount: parseFloat(targetAmount),
+      deadline: deadline || 'Dec 2026',
+      emoji,
+    })
+
+    setShowAdd(false)
+    setName('')
+    setTargetAmount('')
+    setSavedAmount('')
+    setDeadline('')
+    fetchGoals()
+
+    api.goals.create({
+      name,
+      targetAmount: parseFloat(targetAmount),
+      deadline: deadline || 'Dec 2026',
+      emoji,
+    }).catch(console.warn)
   }
 
   const handleDeposit = async (id: string) => {
     const val = parseFloat(depositInput)
     if (isNaN(val) || val <= 0) return
 
-    try {
-      await api.goals.deposit(id, val)
-      setDepositGoalId(null)
-      setDepositInput('')
-      fetchGoals()
-    } catch (err) {
-      console.error('Error adding deposit to goal:', err)
-    }
+    dataStore.depositGoal(id, val)
+    setDepositGoalId(null)
+    setDepositInput('')
+    fetchGoals()
+
+    api.goals.deposit(id, val).catch(console.warn)
   }
 
   const handleDeleteGoal = async (id: string) => {
     if (confirm('Are you sure you want to delete this goal?')) {
-      try {
-        await api.goals.delete(id)
-        fetchGoals()
-      } catch (err) {
-        console.error('Error deleting goal:', err)
-      }
+      dataStore.deleteGoal(id)
+      fetchGoals()
+
+      api.goals.delete(id).catch(console.warn)
     }
   }
 

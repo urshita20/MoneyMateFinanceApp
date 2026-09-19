@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Upload, Scan, X, CheckCircle } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 
 const categories = [
   { id: 'Food & Dining', label: 'Food', emoji: '🍕' },
@@ -47,7 +48,7 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
     setError('')
     try {
       const selectedCat = categories.find(c => c.id === form.category)
-      const res = await api.transactions.create({
+      const txData = {
         merchant: form.merchant,
         amount: parseFloat(form.amount),
         category: form.category,
@@ -56,14 +57,13 @@ export default function AddExpense({ onNav }: AddExpenseProps) {
         date: form.date,
         description: form.notes,
         paymentMethod: form.paymentMethod,
-      })
-
-      if (res.success) {
-        setSaved(true)
-        setTimeout(() => onNav('dashboard'), 1200)
-      } else {
-        setError(res.message || 'Failed to save transaction')
       }
+
+      dataStore.addTransaction(txData)
+      api.transactions.create(txData).catch(console.warn)
+
+      setSaved(true)
+      setTimeout(() => onNav('dashboard'), 800)
     } catch (err: any) {
       setError(err.message || 'Server error saving transaction')
     } finally {

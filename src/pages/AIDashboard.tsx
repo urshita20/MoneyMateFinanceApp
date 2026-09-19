@@ -78,7 +78,7 @@ export default function AIDashboard() {
       <div>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">AI Insights</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-          Finshpere analysis — July 2025 · Updated just now
+          MoneyMate analysis — July 2025 · Updated just now
         </p>
       </div>
 
@@ -94,7 +94,7 @@ export default function AIDashboard() {
               <Sparkles size={16} className="text-emerald-400" />
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Finshpere · Monthly Summary</p>
+              <p className="text-sm font-bold text-white">MoneyMate · Monthly Summary</p>
               <p className="text-xs text-slate-400">July 2025</p>
             </div>
           </div>
@@ -247,7 +247,7 @@ export default function AIDashboard() {
         {[
           { icon: '🍽️', text: 'You spent 22% more on dining this month. Try cooking 3 days/week to save ₹2,400.', type: 'warning' },
           { icon: '💡', text: 'Reducing streaming subscriptions (3 active) can save you ₹14,000 annually.', type: 'tip' },
-          { icon: '📈', text: 'Your savings rate of 38.4% puts you in the top 25% of Finshpere users. Keep it up!', type: 'positive' },
+          { icon: '📈', text: 'Your savings rate of 38.4% puts you in the top 25% of MoneyMate users. Keep it up!', type: 'positive' },
         ].map((tip, i) => (
           <div key={i} className={`rounded-2xl p-5 border ${
             tip.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40'

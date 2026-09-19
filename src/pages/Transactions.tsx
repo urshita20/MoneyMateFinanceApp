@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, Filter, Download, ArrowUp, ArrowDown, Trash2, Plus } from 'lucide-react'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 import type { Page } from '../types'
 
 const categoryOptions = ['All', 'Food & Dining', 'Housing', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Groceries', 'Utilities', 'Salary', 'Freelance', 'Other']
@@ -18,14 +19,13 @@ export default function Transactions({ onNav }: TransactionsProps) {
 
   const fetchTransactions = () => {
     setLoading(true)
-    api.transactions.getAll()
-      .then(res => {
-        if (res.success && res.transactions) {
-          setTxList(res.transactions)
-        }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    const local = dataStore.getTransactions()
+    setTxList(local)
+    setLoading(false)
+
+    dataStore.syncWithBackend().then(() => {
+      setTxList(dataStore.getTransactions())
+    }).catch(console.warn)
   }
 
   useEffect(() => {
@@ -35,12 +35,10 @@ export default function Transactions({ onNav }: TransactionsProps) {
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (confirm('Are you sure you want to delete this transaction?')) {
-      try {
-        await api.transactions.delete(id)
-        fetchTransactions()
-      } catch (err) {
-        console.error('Failed to delete transaction:', err)
-      }
+      dataStore.deleteTransaction(id)
+      fetchTransactions()
+
+      api.transactions.delete(id).catch(console.warn)
     }
   }
 

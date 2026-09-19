@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { TrendingUp, ChevronRight, CheckCircle, Wallet, Target, PiggyBank } from 'lucide-react'
 import type { Page } from '../types'
 import { api } from '../services/api'
+import { dataStore } from '../services/dataStore'
 
 const steps = [
   { id: 1, title: 'Monthly Income', subtitle: 'What is your regular monthly income?' },
@@ -36,11 +37,17 @@ export default function Onboarding({ onNav }: OnboardingProps) {
       const budgetVal = parseFloat(form.budget) || 0
       const targetVal = parseFloat(form.savingsTarget) || 0
 
-      await api.auth.setup({
+      dataStore.updateProfile({
         monthlyIncome: incomeVal,
         monthlyBudget: budgetVal,
         savingsTarget: targetVal,
       })
+
+      api.auth.setup({
+        monthlyIncome: incomeVal,
+        monthlyBudget: budgetVal,
+        savingsTarget: targetVal,
+      }).catch(console.warn)
     } catch (err) {
       console.error('Setup save error:', err)
     } finally {

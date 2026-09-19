@@ -1,10 +1,11 @@
 import {
-  LayoutDashboard, ArrowLeftRight, PieChart, Sparkles, Target, Calendar,
+  LayoutDashboard, ArrowLeftRight, PieChart, Sparkles, Target,
   Scan, MessageSquare, BookOpen, Settings, TrendingUp, Heart, LogOut,
-  CreditCard, BarChart2, Globe, Wallet, Activity, Lightbulb,
+  BarChart2, Globe, Activity, Lightbulb,
   Clock, Shield, Users,
 } from 'lucide-react'
 import type { Page } from '../types'
+import { api } from '../services/api'
 
 const sections = [
   {
@@ -14,14 +15,11 @@ const sections = [
       { icon: ArrowLeftRight,  label: 'Transactions',  page: 'transactions' as Page },
       { icon: PieChart,        label: 'Budget',         page: 'budget' as Page },
       { icon: Target,          label: 'Goals',          page: 'goals' as Page },
-      { icon: Calendar,        label: 'Bills',          page: 'bills' as Page },
     ],
   },
   {
-    label: 'Finance',
+    label: 'Finance & Health',
     items: [
-      { icon: CreditCard,  label: 'Loans',            page: 'loans' as Page },
-      { icon: Wallet,      label: 'Net Worth',         page: 'networth' as Page },
       { icon: Heart,       label: 'Health Score',      page: 'financial-health' as Page },
     ],
   },
@@ -33,7 +31,7 @@ const sections = [
     ],
   },
   {
-    label: 'Invest',
+    label: 'Investments',
     items: [
       { icon: BarChart2,   label: 'Portfolio',         page: 'portfolio' as Page },
       { icon: Globe,       label: 'Market',            page: 'market' as Page },
@@ -41,7 +39,7 @@ const sections = [
     ],
   },
   {
-    label: 'AI Tools',
+    label: 'AI Copilot',
     items: [
       { icon: Sparkles,       label: 'AI Insights',   page: 'ai-dashboard' as Page },
       { icon: Activity,       label: 'Analytics',      page: 'insights' as Page },
@@ -61,9 +59,24 @@ const sections = [
 interface SidebarProps {
   currentPage: Page
   onNav: (p: Page) => void
+  user?: any
+  onLogout?: () => void
 }
 
-export default function Sidebar({ currentPage, onNav }: SidebarProps) {
+export default function Sidebar({ currentPage, onNav, user, onLogout }: SidebarProps) {
+  const userName = user?.name || 'Urshita Madaan'
+  const userEmail = user?.email || 'urshita@gmail.com'
+  const initial = userName.charAt(0).toUpperCase()
+
+  const handleSwitchJunior = async () => {
+    try {
+      await api.auth.switchProfile('junior')
+    } catch (e) {
+      // ignore
+    }
+    onNav('junior-dashboard')
+  }
+
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col z-20">
       {/* Logo */}
@@ -116,23 +129,31 @@ export default function Sidebar({ currentPage, onNav }: SidebarProps) {
       {/* Switch to Junior + User profile */}
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
         <button
-          onClick={() => onNav('profile-switcher')}
+          onClick={handleSwitchJunior}
           className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-900/20 hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors border border-sky-200 dark:border-sky-800/40"
         >
           <Users size={14} className="text-sky-500" />
           Switch to Junior Profile
-          <span className="ml-auto text-xs bg-sky-200 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded-full font-semibold">Leo</span>
+          <span className="ml-auto text-xs bg-sky-200 dark:bg-sky-900/50 text-sky-600 dark:text-sky-400 px-1.5 py-0.5 rounded-full font-semibold">Kids Mode</span>
         </button>
 
-        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors group">
+        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-            A
+            {initial}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">Arjun Sharma</p>
-            <p className="text-xs text-slate-400 truncate">arjun@gmail.com</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{userName}</p>
+            <p className="text-xs text-slate-400 truncate">{userEmail}</p>
           </div>
-          <LogOut size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              title="Log out"
+              className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+            >
+              <LogOut size={15} />
+            </button>
+          )}
         </div>
       </div>
     </aside>

@@ -13,17 +13,13 @@ import Budget from './pages/Budget'
 import AIInsights from './pages/AIInsights'
 import AIChat from './pages/AIChat'
 import OCRScanner from './pages/OCRScanner'
-import HealthScore from './pages/HealthScore'
 import Goals from './pages/Goals'
-import Bills from './pages/Bills'
 import KnowledgeHub from './pages/KnowledgeHub'
 import Settings from './pages/Settings'
 import AddExpense from './pages/AddExpense'
-import Loans from './pages/Loans'
 import Investments from './pages/Investments'
 import Portfolio from './pages/Portfolio'
 import Market from './pages/Market'
-import NetWorth from './pages/NetWorth'
 import FinancialHealth from './pages/FinancialHealth'
 import AIDashboard from './pages/AIDashboard'
 import TimeMachine from './pages/TimeMachine'
@@ -46,21 +42,30 @@ export default function App() {
   }, [dark])
 
   useEffect(() => {
-    // Load current authenticated user on boot
-    api.auth.getMe().then(res => {
-      if (res.success && res.user) {
-        setUser(res.user)
-      }
-    }).catch(console.error)
-  }, [])
+    // Load authenticated user on app load
+    const token = localStorage.getItem('moneymate_token')
+    if (token) {
+      api.auth.getMe().then(res => {
+        if (res.success && res.user) {
+          setUser(res.user)
+        }
+      }).catch(console.error)
+    }
+  }, [page])
 
   const nav = (p: Page) => setPage(p)
   const toggleDark = () => setDark(d => !d)
 
+  const handleLogout = () => {
+    localStorage.removeItem('moneymate_token')
+    setUser(null)
+    setPage('landing')
+  }
+
   if (page === 'landing') return <Landing onNav={nav} />
-  if (page === 'login' || page === 'signup') return <Auth onNav={nav} initial={page} onAuthSuccess={(u) => setUser(u)} />
+  if (page === 'login' || page === 'signup') return <Auth onNav={nav} initial={page} onAuthSuccess={(u) => { setUser(u); nav('dashboard'); }} />
   if (page === 'onboarding') return <Onboarding onNav={nav} />
-  if (page === 'profile-switcher') return <ProfileSwitcher onNav={nav} />
+  if (page === 'profile-switcher') return <ProfileSwitcher onNav={nav} user={user} />
 
   if (juniorPages.includes(page)) {
     return (
@@ -75,24 +80,20 @@ export default function App() {
   }
 
   return (
-    <Layout page={page} onNav={nav} dark={dark} onToggleDark={toggleDark}>
+    <Layout page={page} onNav={nav} dark={dark} onToggleDark={toggleDark} user={user} onLogout={handleLogout}>
       {page === 'dashboard' && <Dashboard onNav={nav} user={user} />}
       {page === 'transactions' && <Transactions />}
       {page === 'budget' && <Budget />}
       {page === 'insights' && <AIInsights />}
       {page === 'chat' && <AIChat />}
       {page === 'ocr' && <OCRScanner onNav={nav} />}
-      {page === 'health' && <HealthScore />}
       {page === 'goals' && <Goals />}
-      {page === 'bills' && <Bills />}
       {page === 'knowledge' && <KnowledgeHub />}
       {page === 'settings' && <Settings />}
       {page === 'add-expense' && <AddExpense onNav={nav} />}
-      {page === 'loans' && <Loans />}
       {page === 'investments' && <Investments />}
       {page === 'portfolio' && <Portfolio />}
       {page === 'market' && <Market />}
-      {page === 'networth' && <NetWorth />}
       {page === 'financial-health' && <FinancialHealth />}
       {page === 'ai-dashboard' && <AIDashboard />}
       {page === 'time-machine' && <TimeMachine />}

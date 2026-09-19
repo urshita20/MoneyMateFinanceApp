@@ -8,15 +8,17 @@ interface LayoutProps {
   onNav: (p: Page) => void
   dark: boolean
   onToggleDark: () => void
+  user?: any
+  onLogout?: () => void
   children: ReactNode
 }
 
-export default function Layout({ page, onNav, dark, onToggleDark, children }: LayoutProps) {
+export default function Layout({ page, onNav, dark, onToggleDark, user, onLogout, children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <Sidebar currentPage={page} onNav={onNav} />
+      <Sidebar currentPage={page} onNav={onNav} user={user} onLogout={onLogout} />
       <div className="ml-64 flex flex-col min-h-screen">
-        <TopBar onNav={onNav} dark={dark} onToggleDark={onToggleDark} />
+        <TopBar onNav={onNav} dark={dark} onToggleDark={onToggleDark} user={user} />
         <main className="flex-1 p-6">{children}</main>
       </div>
     </div>

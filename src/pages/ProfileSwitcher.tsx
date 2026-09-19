@@ -1,18 +1,37 @@
 import { useState } from 'react'
 import { TrendingUp, Lock, Users, ArrowRight, Star } from 'lucide-react'
 import type { Page } from '../types'
+import { api } from '../services/api'
 
 interface ProfileSwitcherProps {
   onNav: (p: Page) => void
+  user?: any
 }
 
-export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
+export default function ProfileSwitcher({ onNav, user }: ProfileSwitcherProps) {
   const [hoveredProfile, setHoveredProfile] = useState<'adult' | 'junior' | null>(null)
   const [pinModal, setPinModal] = useState(false)
   const [pin, setPin] = useState('')
 
-  const enterAdult = () => {
+  const adultName = user?.name || 'Urshita Madaan'
+  const adultInitial = adultName.charAt(0).toUpperCase()
+
+  const enterAdult = async () => {
+    try {
+      await api.auth.switchProfile('adult')
+    } catch (e) {
+      // ignore
+    }
     setPinModal(true)
+  }
+
+  const enterJunior = async () => {
+    try {
+      await api.auth.switchProfile('junior')
+    } catch (e) {
+      // ignore
+    }
+    onNav('junior-dashboard')
   }
 
   const submitPin = () => {
@@ -55,7 +74,7 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
           {/* Avatar */}
           <div className="relative">
             <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-4xl font-bold text-white shadow-lg">
-              A
+              {adultInitial}
             </div>
             <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center shadow-sm">
               <Lock size={12} className="text-white" />
@@ -63,12 +82,12 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
           </div>
 
           <div className="text-center">
-            <p className="text-white font-semibold text-base">Alex</p>
-            <p className="text-slate-400 text-xs mt-0.5">Primary Account</p>
+            <p className="text-white font-semibold text-base">{adultName}</p>
+            <p className="text-slate-400 text-xs mt-0.5">Primary Adult Account</p>
           </div>
 
           <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            <p className="text-xs font-semibold text-emerald-400">Finshpere Pro</p>
+            <p className="text-xs font-semibold text-emerald-400">Finshpere Adult Pro</p>
           </div>
 
           <div className={`flex items-center gap-1.5 text-xs transition-colors ${hoveredProfile === 'adult' ? 'text-emerald-400' : 'text-slate-500'}`}>
@@ -85,7 +104,7 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
 
         {/* Junior profile */}
         <button
-          onClick={() => onNav('junior-dashboard')}
+          onClick={enterJunior}
           onMouseEnter={() => setHoveredProfile('junior')}
           onMouseLeave={() => setHoveredProfile(null)}
           className={`group flex flex-col items-center gap-4 p-6 rounded-3xl border transition-all duration-200 w-52 ${
@@ -97,7 +116,7 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
           {/* Avatar */}
           <div className="relative">
             <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-sky-400 to-violet-500 flex items-center justify-center text-4xl font-bold text-white shadow-lg">
-              L
+              K
             </div>
             <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-400 rounded-full flex items-center justify-center shadow-sm">
               <Star size={11} className="text-white fill-white" />
@@ -105,8 +124,8 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
           </div>
 
           <div className="text-center">
-            <p className="text-white font-semibold text-base">Leo</p>
-            <p className="text-slate-400 text-xs mt-0.5">Junior Saver</p>
+            <p className="text-white font-semibold text-base">Kids Saver</p>
+            <p className="text-slate-400 text-xs mt-0.5">Junior Saver Profile</p>
           </div>
 
           <div className="px-3 py-1.5 rounded-full bg-sky-500/10 border border-sky-500/20">
@@ -120,7 +139,7 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
       </div>
 
       {/* Manage accounts */}
-      <button className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-medium transition-colors border border-slate-800 hover:border-slate-700 px-5 py-2.5 rounded-xl">
+      <button onClick={() => onNav('settings')} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-medium transition-colors border border-slate-800 hover:border-slate-700 px-5 py-2.5 rounded-xl">
         <Users size={14} />
         Manage Family Accounts
       </button>
@@ -133,7 +152,7 @@ export default function ProfileSwitcher({ onNav }: ProfileSwitcherProps) {
               <Lock size={22} className="text-amber-400" />
             </div>
             <h2 className="text-white font-bold text-lg mb-1">Enter PIN</h2>
-            <p className="text-slate-400 text-sm mb-6">Workspace is PIN-protected</p>
+            <p className="text-slate-400 text-sm mb-6">Workspace is PIN-protected (press any 4 numbers)</p>
             <div className="flex justify-center gap-3 mb-6">
               {[0, 1, 2, 3].map(i => (
                 <div

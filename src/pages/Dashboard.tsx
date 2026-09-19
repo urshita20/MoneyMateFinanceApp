@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Wallet, TrendingUp, TrendingDown, PiggyBank, Heart, Plus, Scan, Sparkles, ArrowRight } from 'lucide-react'
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, Heart, Plus, Scan, Sparkles, ArrowRight, BellRing } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -31,7 +31,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
   const [txList, setTxList] = useState(defaultTransactions)
 
   useEffect(() => {
-    // Fetch live dashboard analytics from Render backend
+    // Fetch live dashboard analytics from backend
     api.analytics.getSummary().then(res => {
       if (res.success && res.summary) setSummary(res.summary)
     }).catch(console.error)
@@ -45,41 +45,60 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
     }).catch(console.error)
 
     api.transactions.getAll().then(res => {
-      if (res.success && res.transactions) setTxList(res.transactions)
+      if (res.success && res.transactions && res.transactions.length > 0) setTxList(res.transactions)
     }).catch(console.error)
   }, [])
 
   const statCardsData = [
-    { title: 'Total Balance', value: summary ? `₹${summary.netWorth.toLocaleString()}` : '₹1,24,500', change: '+8.2%', icon: Wallet, bg: 'bg-emerald-500', positive: true },
+    { title: 'Total Balance', value: summary ? `₹${summary.netWorth.toLocaleString()}` : '₹1,42,500', change: '+8.2%', icon: Wallet, bg: 'bg-emerald-500', positive: true },
     { title: 'Monthly Income', value: summary ? `₹${summary.monthlyIncome.toLocaleString()}` : '₹85,000', change: 'Stable', icon: TrendingUp, bg: 'bg-blue-500', positive: true },
     { title: 'Monthly Expenses', value: summary ? `₹${summary.monthlyExpense.toLocaleString()}` : '₹52,340', change: '+4.1%', icon: TrendingDown, bg: 'bg-rose-400', positive: false },
     { title: 'Savings', value: summary ? `₹${(summary.monthlyIncome - summary.monthlyExpense).toLocaleString()}` : '₹32,660', change: '+12%', icon: PiggyBank, bg: 'bg-violet-500', positive: true },
-    { title: 'Health Score', value: summary ? `${summary.healthScore} / 100` : '74 / 100', change: 'Good', icon: Heart, bg: 'bg-amber-500', positive: true },
+    { title: 'Health Score', value: summary ? `${summary.healthScore} / 100` : '84 / 100', change: 'Good', icon: Heart, bg: 'bg-amber-500', positive: true },
   ]
 
-  const userName = user?.name || 'Guest User'
+  const userName = user?.name || 'Urshita Madaan'
 
   return (
     <div className="space-y-6 max-w-[1280px]">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Good morning, {userName} 👋</h1>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Welcome back, {userName} 👋</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Here's your live financial overview</p>
         </div>
         <div className="flex items-center gap-3">
           {!user && (
             <button
               onClick={() => onNav('login')}
-              className="text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl transition-colors shadow-sm"
+              className="text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white px-3.5 py-2 rounded-xl transition-colors shadow-sm"
             >
               Sign In / Register
             </button>
           )}
-          <span className="text-sm text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
-            Today
+          <span className="text-xs font-medium text-slate-500 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5">
+            Active Workspace
           </span>
         </div>
+      </div>
+
+      {/* Bill Notification Banner */}
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+            <BellRing size={18} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900 dark:text-amber-200">Upcoming Bill Notification</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Electricity bill (₹1,850) & Internet bill (₹1,499) due in 3 days</p>
+          </div>
+        </div>
+        <button
+          onClick={() => onNav('insights')}
+          className="text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 px-3 py-1.5 rounded-xl transition-colors"
+        >
+          View AI Reminders
+        </button>
       </div>
 
       {/* Stat cards */}
@@ -175,7 +194,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
 
         {/* Line chart */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Spending Trend (This Week)</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Weekly Spending Trend</h3>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={weeklyTrends}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -244,62 +263,30 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
           </div>
         </div>
 
-        {/* Right widgets */}
-        <div className="space-y-4">
-          {/* Upcoming bills */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Upcoming Bills</h3>
-              <button
-                onClick={() => onNav('bills')}
-                className="text-xs text-emerald-600 dark:text-emerald-400 font-medium"
-              >
-                See all
-              </button>
-            </div>
-            <div className="space-y-3">
-              {[
-                { name: 'Internet', amount: 1499, due: 'Today', urgent: true, emoji: '📶' },
-                { name: 'Electricity', amount: 1850, due: 'Jul 20', urgent: true, emoji: '⚡' },
-                { name: 'Rent', amount: 25000, due: 'Jul 25', urgent: false, emoji: '🏠' },
-              ].map(bill => (
-                <div key={bill.name} className="flex items-center gap-3">
-                  <span className="text-base">{bill.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">{bill.name}</p>
-                    <p className={`text-xs ${bill.urgent ? 'text-rose-500' : 'text-slate-400'}`}>Due {bill.due}</p>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                    ₹{bill.amount.toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Goals */}
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Goals Progress</h3>
+        {/* Goals Progress Widget */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Financial Goals</h3>
               <button
                 onClick={() => onNav('goals')}
                 className="text-xs text-emerald-600 dark:text-emerald-400 font-medium"
               >
-                See all
+                View Goals
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[
-                { name: 'Emergency Fund', progress: 48, color: 'bg-emerald-500' },
-                { name: 'Goa Vacation', progress: 64, color: 'bg-blue-500' },
-                { name: 'MacBook Pro', progress: 42, color: 'bg-violet-500' },
+                { name: 'Emergency Fund', progress: 48, saved: '₹1,45,000', target: '₹3,00,000', color: 'bg-emerald-500' },
+                { name: 'Goa Vacation', progress: 64, saved: '₹32,000', target: '₹50,000', color: 'bg-blue-500' },
+                { name: 'MacBook Pro', progress: 42, saved: '₹75,000', target: '₹1,80,000', color: 'bg-violet-500' },
               ].map(goal => (
                 <div key={goal.name}>
                   <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-slate-600 dark:text-slate-400 font-medium">{goal.name}</span>
-                    <span className="text-slate-900 dark:text-white font-semibold">{goal.progress}%</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">{goal.name}</span>
+                    <span className="text-slate-900 dark:text-white font-semibold">{goal.saved} / {goal.target}</span>
                   </div>
-                  <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${goal.color} rounded-full transition-all`}
                       style={{ width: `${goal.progress}%` }}
@@ -309,6 +296,14 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
               ))}
             </div>
           </div>
+
+          <button
+            onClick={() => onNav('financial-health')}
+            className="w-full mt-4 flex items-center justify-center gap-2 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-semibold py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors"
+          >
+            <Heart size={14} className="text-rose-500" />
+            Check Health Score Breakdown
+          </button>
         </div>
       </div>
 
@@ -319,7 +314,7 @@ export default function Dashboard({ onNav, user }: DashboardProps) {
           {[
             { label: 'Add Expense', icon: Plus, style: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm shadow-emerald-500/25', page: 'add-expense' as Page },
             { label: 'Scan Receipt', icon: Scan, style: 'bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-800/30', page: 'ocr' as Page },
-            { label: 'Ask AI', icon: Sparkles, style: 'bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30', page: 'chat' as Page },
+            { label: 'Ask AI Copilot', icon: Sparkles, style: 'bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 text-violet-600 dark:text-violet-400 border border-violet-100 dark:border-violet-800/30', page: 'chat' as Page },
             { label: 'View Insights', icon: TrendingUp, style: 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-800/30', page: 'insights' as Page },
           ].map(action => (
             <button

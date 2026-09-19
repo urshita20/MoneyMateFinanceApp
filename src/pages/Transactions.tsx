@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Search, Filter, Download, ArrowUp, ArrowDown } from 'lucide-react'
-import { transactions } from '../data/mockData'
+import { transactions as defaultData } from '../data/mockData'
+import { api } from '../services/api'
 
-const allTransactions = [
-  ...transactions,
+const initialTransactions = [
+  ...defaultData,
   { id: 9, merchant: 'D-Mart', category: 'Groceries', amount: -3200, date: 'Jul 11', emoji: '🛒' },
   { id: 10, merchant: 'Spotify', category: 'Entertainment', amount: -179, date: 'Jul 10', emoji: '🎵' },
   { id: 11, merchant: 'Freelance Project', category: 'Income', amount: 15000, date: 'Jul 8', emoji: '💻' },
@@ -15,21 +16,30 @@ const allTransactions = [
 const categories = ['All', 'Income', 'Food', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Groceries', 'Cash']
 
 export default function Transactions() {
+  const [txList, setTxList] = useState(initialTransactions)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [sort, setSort] = useState<'date' | 'amount'>('date')
 
-  const filtered = allTransactions
+  useEffect(() => {
+    api.transactions.getAll().then(res => {
+      if (res.success && res.transactions && res.transactions.length > 0) {
+        setTxList(res.transactions)
+      }
+    }).catch(console.error)
+  }, [])
+
+  const filtered = txList
     .filter(tx => {
       const matchSearch = tx.merchant.toLowerCase().includes(search.toLowerCase()) ||
         tx.category.toLowerCase().includes(search.toLowerCase())
       const matchCat = category === 'All' || tx.category === category
       return matchSearch && matchCat
     })
-    .sort((a, b) => sort === 'amount' ? Math.abs(b.amount) - Math.abs(a.amount) : b.id - a.id)
+    .sort((a, b) => sort === 'amount' ? Math.abs(b.amount) - Math.abs(a.amount) : Number(b.id) - Number(a.id))
 
-  const totalIncome = allTransactions.filter(t => t.amount > 0).reduce((a, t) => a + t.amount, 0)
-  const totalExpense = allTransactions.filter(t => t.amount < 0).reduce((a, t) => a + Math.abs(t.amount), 0)
+  const totalIncome = txList.filter(t => t.amount > 0).reduce((a, t) => a + t.amount, 0)
+  const totalExpense = txList.filter(t => t.amount < 0).reduce((a, t) => a + Math.abs(t.amount), 0)
 
   return (
     <div className="max-w-4xl space-y-5">

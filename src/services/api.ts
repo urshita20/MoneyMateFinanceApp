@@ -235,4 +235,36 @@ export const api = {
       return res.json();
     },
   },
+
+  // Shared Expenses API
+  sharedExpenses: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/expenses/my`, {
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
+    create: async (data: {
+      description: string;
+      amount: number;
+      participantEmails: string[];
+      category?: string;
+      groupName?: string;
+    }) => {
+      const res = await fetch(`${API_BASE_URL}/api/expenses`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    },
+    settle: async (id: string) => {
+      const res = await fetch(`${API_BASE_URL}/api/expenses/${id}/settle`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
+  },
 };
+

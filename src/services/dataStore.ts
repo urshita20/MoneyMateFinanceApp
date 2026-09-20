@@ -68,6 +68,43 @@ export interface UserProfile {
   hasCompletedSetup: boolean;
 }
 
+export interface SharedExpenseUserRef {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface SharedExpenseSplitItem {
+  id: string;
+  sharedExpenseId: string;
+  userId: string;
+  user: SharedExpenseUserRef;
+  amount: number;
+  settled: boolean;
+  settledAt?: string;
+}
+
+export interface SharedExpenseItem {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  groupName: string;
+  paidById: string;
+  paidBy: SharedExpenseUserRef;
+  settled: boolean;
+  settledAt?: string;
+  createdAt: string;
+  splits: SharedExpenseSplitItem[];
+}
+
+export interface NetContactBalance {
+  contactId: string;
+  name: string;
+  email: string;
+  netAmount: number;
+}
+
 class DataStoreManager {
   private activeEmail: string = '';
 
@@ -913,11 +950,116 @@ class DataStoreManager {
         data.commitments = Array.from(mergedMap.values());
       }
 
+      // Sync Shared Expenses
+      try {
+        const expenseRes = await api.sharedExpenses.getAll();
+        if (expenseRes && expenseRes.success && Array.isArray(expenseRes.expenses)) {
+          data.sharedExpenses = expenseRes.expenses;
+        }
+      } catch (e) {}
+
       this.saveData(data);
     } catch (err) {
       console.warn('Background sync warning:', err);
     }
   }
+
+  // --- Shared Expenses Storage API ---
+  public getSharedExpenses(): SharedExpenseItem[] {
+    const data = this.getData();
+    return data.sharedExpenses || [];
+  }
+
+  public setSharedExpenses(expenses: SharedExpenseItem[]) {
+    const data = this.getData();
+    data.sharedExpenses = expenses;
+    this.saveData(data);
+  }
+
+  public addSharedExpense(expense: SharedExpenseItem) {
+    const data = this.getData();
+    if (!data.sharedExpenses) data.sharedExpenses = [];
+
+    // Deduplicate or unshift
+    const exists = data.sharedExpenses.some(e => e.id === expense.id);
+    if (!exists) {
+      data.sharedExpenses.unshift(expense);
+    } else {
+      data.sharedExpenses = data.sharedExpenses.map(e => e.id === expense.id ? expense : e);
+    }
+
+    this.saveData(data);
+  }
+
+  public settleSharedExpense(id: string) {
+    const data = this.getData();
+    if (!data.sharedExpenses) return;
+    const item = data.sharedExpenses.find(e => e.id === id);
+    if (item) {
+      item.settled = true;
+      item.settledAt = new Date().toISOString();
+      if (item.splits) {
+        item.splits.forEach(s => {
+          s.settled = true;
+          s.settledAt = new Date().toISOString();
+        });
+      }
+      this.saveData(data);
+    }
+  }
+
+  public getSharedExpenseSummary() {
+    const expenses = this.getSharedExpenses();
+    const currentEmail = (this.getActiveEmail() || '').toLowerCase().trim();
+    let totalYouOwe = 0;
+    let totalOwedToYou = 0;
+    const netContactMap: Record<string, NetContactBalance> = {};
+
+    expenses.forEach(exp => {
+      const payerEmail = (exp.paidBy?.email || '').toLowerCase().trim();
+      const isPayer = payerEmail === currentEmail || exp.paidById === currentEmail;
+
+      exp.splits?.forEach(split => {
+        if (split.settled || exp.settled) return;
+
+        const splitUserEmail = (split.user?.email || '').toLowerCase().trim();
+        const isSplitUserMe = splitUserEmail === currentEmail || split.userId === currentEmail;
+
+        if (isPayer && !isSplitUserMe) {
+          totalOwedToYou += split.amount;
+          const key = splitUserEmail || split.userId;
+          if (!netContactMap[key]) {
+            netContactMap[key] = {
+              contactId: split.userId,
+              name: split.user?.name || key.split('@')[0],
+              email: split.user?.email || key,
+              netAmount: 0,
+            };
+          }
+          netContactMap[key].netAmount += split.amount;
+        } else if (!isPayer && isSplitUserMe) {
+          totalYouOwe += split.amount;
+          const key = payerEmail || exp.paidById;
+          if (!netContactMap[key]) {
+            netContactMap[key] = {
+              contactId: exp.paidById,
+              name: exp.paidBy?.name || key.split('@')[0],
+              email: exp.paidBy?.email || key,
+              netAmount: 0,
+            };
+          }
+          netContactMap[key].netAmount -= split.amount;
+        }
+      });
+    });
+
+    return {
+      totalYouOwe: Math.round(totalYouOwe * 100) / 100,
+      totalOwedToYou: Math.round(totalOwedToYou * 100) / 100,
+      netBalances: Object.values(netContactMap),
+    };
+  }
 }
 
 export const dataStore = new DataStoreManager();
+

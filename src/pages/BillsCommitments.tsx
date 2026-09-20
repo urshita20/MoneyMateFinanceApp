@@ -10,9 +10,10 @@ import { api } from '../services/api';
 
 interface BillsCommitmentsProps {
   onNav?: (page: string) => void;
+  user?: any;
 }
 
-export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
+export default function BillsCommitments({ onNav, user }: BillsCommitmentsProps) {
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [userCommitments, setUserCommitments] = useState<CommitmentItem[]>([]);
   const [allCommitments, setAllCommitments] = useState<CommitmentItem[]>([]);
@@ -704,9 +705,19 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
           <div className="space-y-3">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Outstanding & Recent Shared Expenses</p>
             {sharedExpenses.map(item => {
-              const currentEmail = (dataStore.getActiveEmail() || '').toLowerCase().trim();
-              const isPayer = (item.paidBy?.email || '').toLowerCase().trim() === currentEmail || item.paidById === currentEmail;
-              const mySplit = item.splits?.find(s => (s.user?.email || '').toLowerCase().trim() === currentEmail || s.userId === currentEmail);
+              const currentUserEmail = (user?.email || dataStore.getActiveEmail() || '').toLowerCase().trim();
+              const currentUserId = user?.id || '';
+
+              const isPayer =
+                (item.paidBy?.email || '').toLowerCase().trim() === currentUserEmail ||
+                item.paidById === currentUserEmail ||
+                (currentUserId !== '' && item.paidById === currentUserId);
+
+              const mySplit = item.splits?.find(s =>
+                (s.user?.email || '').toLowerCase().trim() === currentUserEmail ||
+                s.userId === currentUserEmail ||
+                (currentUserId !== '' && s.userId === currentUserId)
+              );
 
               return (
                 <div

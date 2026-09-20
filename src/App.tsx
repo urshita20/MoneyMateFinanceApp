@@ -125,7 +125,7 @@ export default function App() {
       {page === 'ai-dashboard' && <AIDashboard />}
       {page === 'time-machine' && <TimeMachine />}
       {page === 'safety-net' && <SafetyNet />}
-      {(page === 'bills-commitments' || page === 'bills') && <BillsCommitments onNav={nav} />}
+      {(page === 'bills-commitments' || page === 'bills') && <BillsCommitments onNav={nav} user={user} />}
 
       {/* Interactive Modals Triggered Globally from Sidebar or Transactions Page */}
       <ReceiptImportModal

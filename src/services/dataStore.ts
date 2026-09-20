@@ -142,11 +142,20 @@ class DataStoreManager {
 
   public getActiveEmail(): string {
     if (this.activeEmail) return this.activeEmail;
-    // Fallback: check stored token or last user
+    try {
+      const stored = localStorage.getItem('moneymate_user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.email) {
+          this.activeEmail = parsed.email.toLowerCase().trim();
+          return this.activeEmail;
+        }
+      }
+    } catch (e) {}
     const lastEmail = localStorage.getItem('moneymate_last_email');
     if (lastEmail) {
-      this.activeEmail = lastEmail;
-      return lastEmail;
+      this.activeEmail = lastEmail.toLowerCase().trim();
+      return this.activeEmail;
     }
     return '';
   }

@@ -21,6 +21,9 @@ export const api = {
       if (data.token) {
         localStorage.setItem('moneymate_token', data.token);
       }
+      if (data.user) {
+        localStorage.setItem('moneymate_user', JSON.stringify(data.user));
+      }
       return data;
     },
     register: async (name: string, email: string, password: string) => {
@@ -33,13 +36,20 @@ export const api = {
       if (data.token) {
         localStorage.setItem('moneymate_token', data.token);
       }
+      if (data.user) {
+        localStorage.setItem('moneymate_user', JSON.stringify(data.user));
+      }
       return data;
     },
     getMe: async () => {
       const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: getAuthHeaders(),
       });
-      return res.json();
+      const data = await res.json();
+      if (data && data.user) {
+        localStorage.setItem('moneymate_user', JSON.stringify(data.user));
+      }
+      return data;
     },
     setup: async (setupData: { monthlyIncome: number; monthlyBudget: number; savingsTarget?: number }) => {
       const res = await fetch(`${API_BASE_URL}/api/auth/setup`, {

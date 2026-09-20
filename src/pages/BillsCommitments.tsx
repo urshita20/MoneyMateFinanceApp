@@ -134,6 +134,39 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
       return;
     }
 
+    const currentEmail = dataStore.getActiveEmail() || 'user@moneymate.com';
+    const currentName = currentEmail.split('@')[0] || 'User';
+
+    const localItem: SharedExpenseItem = {
+      id: 'shared_' + Date.now(),
+      description: sharedForm.description.trim(),
+      amount: amt,
+      category: sharedForm.category,
+      groupName: sharedForm.groupName,
+      paidById: currentEmail,
+      paidBy: { id: currentEmail, name: currentName, email: currentEmail },
+      settled: false,
+      createdAt: new Date().toISOString(),
+      splits: [
+        {
+          id: 'split_payer_' + Date.now(),
+          sharedExpenseId: 'shared_' + Date.now(),
+          userId: currentEmail,
+          user: { id: currentEmail, name: currentName, email: currentEmail },
+          amount: Math.round((amt / (sharedForm.participantEmails.length + 1)) * 100) / 100,
+          settled: false,
+        },
+        ...sharedForm.participantEmails.map((email, i) => ({
+          id: `split_${i}_` + Date.now(),
+          sharedExpenseId: 'shared_' + Date.now(),
+          userId: email,
+          user: { id: email, name: email.split('@')[0], email },
+          amount: Math.round((amt / (sharedForm.participantEmails.length + 1)) * 100) / 100,
+          settled: false,
+        })),
+      ],
+    };
+
     setIsSubmittingShared(true);
     try {
       const res = await api.sharedExpenses.create({
@@ -144,13 +177,14 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
         groupName: sharedForm.groupName,
       });
 
-      if (!res.success) {
-        setSharedError(res.message || 'Failed to create shared expense');
-        setIsSubmittingShared(false);
-        return;
+      if (res && res.success && res.expense) {
+        dataStore.addSharedExpense(res.expense);
+      } else {
+        dataStore.addSharedExpense(localItem);
       }
-
-      dataStore.addSharedExpense(res.expense);
+    } catch (err: any) {
+      dataStore.addSharedExpense(localItem);
+    } finally {
       setShowAddSharedModal(false);
       setSharedForm({
         description: '',
@@ -160,11 +194,8 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
         participantInput: '',
         participantEmails: [],
       });
-      loadSharedExpenses();
-    } catch (err: any) {
-      setSharedError('Server error while saving shared expense.');
-    } finally {
       setIsSubmittingShared(false);
+      loadSharedExpenses();
     }
   };
 

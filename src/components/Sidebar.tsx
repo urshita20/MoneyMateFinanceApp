@@ -16,6 +16,7 @@ const sections = [
       { icon: PieChart,        label: 'Budget',         page: 'budget' as Page },
       { icon: Target,          label: 'Goals',          page: 'goals' as Page },
       { icon: Receipt,         label: 'Bills & Commitments', page: 'bills-commitments' as Page },
+      { icon: Users,           label: 'Split Bill',          page: 'split-bill' as Page },
     ],
   },
   {

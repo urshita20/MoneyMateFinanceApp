@@ -25,6 +25,7 @@ export type Page =
   | 'safety-net'
   | 'bills-commitments'
   | 'bills'
+  | 'split-bill'
   | 'junior-dashboard'
   | 'junior-goals'
   | 'junior-quests'

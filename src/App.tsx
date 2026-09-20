@@ -27,6 +27,7 @@ import AIDashboard from './pages/AIDashboard'
 import TimeMachine from './pages/TimeMachine'
 import SafetyNet from './pages/SafetyNet'
 import BillsCommitments from './pages/BillsCommitments'
+import SplitBill from './pages/SplitBill'
 import JuniorDashboard from './pages/junior/JuniorDashboard'
 import JuniorGoals from './pages/junior/JuniorGoals'
 import JuniorQuests from './pages/junior/JuniorQuests'
@@ -126,6 +127,7 @@ export default function App() {
       {page === 'time-machine' && <TimeMachine />}
       {page === 'safety-net' && <SafetyNet />}
       {(page === 'bills-commitments' || page === 'bills') && <BillsCommitments onNav={nav} user={user} />}
+      {page === 'split-bill' && <SplitBill onNav={nav} user={user} />}
 
       {/* Interactive Modals Triggered Globally from Sidebar or Transactions Page */}
       <ReceiptImportModal

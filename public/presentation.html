@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MoneyMate — Product Presentation Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(17, 24, 39, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --emerald: #10b981;
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Top Navigation Bar */
+    .nav-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      padding: 0 2rem;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px var(--emerald-glow);
+      font-size: 1.2rem;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.2rem;
+      border-radius: 10px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      border: none;
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 4px 15px var(--emerald-glow);
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Main Deck Container */
+    .deck-container {
+      margin-top: 70px;
+      margin-bottom: 80px;
+      min-height: calc(100vh - 150px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      position: relative;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1100px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 3.5rem;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Slide Content Typography */
+    .slide-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.85rem;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #34d399;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1.25rem;
+    }
+
+    .slide-title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .slide-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+      max-width: 850px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.75rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .feature-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(16, 185, 129, 0.3);
+      transform: translateY(-3px);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-desc {
+      font-size: 0.925rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-top: 0.75rem;
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    /* Hero Slide Special Styling */
+    .hero-slide {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4.5rem 3rem;
+    }
+
+    .hero-title {
+      font-size: 3.25rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+      background: linear-gradient(135deg, #ffffff 30%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      margin-top: 3rem;
+      padding-top: 2.5rem;
+      border-top: 1px solid var(--card-border);
+      width: 100%;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-val {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #10b981;
+    }
+
+    .stat-lbl {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Bottom Control Bar */
+    .controls-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 80px;
+      padding: 0 2rem;
+      background: rgba(9, 13, 22, 0.9);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .slide-indicator {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 100px;
+      text-align: center;
+    }
+
+    .dots-container {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .dot.active {
+      background: var(--emerald);
+      width: 24px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px var(--emerald-glow);
+    }
+
+    /* Printable PDF Styles */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      .nav-header, .controls-footer {
+        display: none !important;
+      }
+      .deck-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        display: block !important;
+      }
+      .slide {
+        display: block !important;
+        page-break-after: always;
+        break-after: page;
+        box-shadow: none !important;
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+        margin-bottom: 2rem !important;
+      }
+      .slide-title, .hero-title {
+        background: none !important;
+        -webkit-text-fill-color: initial !important;
+        color: #0f172a !important;
+      }
+      .slide-subtitle, .card-desc, .stat-lbl {
+        color: #475569 !important;
+      }
+      .card-title {
+        color: #0f172a !important;
+      }
+      .feature-card {
+        background: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="nav-header">
+    <a href="https://money-mate-finance-app.vercel.app/" class="brand" target="_blank">
+      <div class="brand-icon">💚</div>
+      <span>MoneyMate</span>
+    </a>
+    <div class="nav-actions">
+      <button onclick="downloadPresentationHTML()" class="btn btn-secondary">
+        📥 Download Presentation (.html)
+      </button>
+      <button onclick="window.print()" class="btn btn-secondary">
+        🖨️ Export / Print PDF
+      </button>
+      <a href="https://money-mate-finance-app.vercel.app/" class="btn btn-primary" target="_blank">
+        🚀 Launch Live App
+      </a>
+    </div>
+  </header>
+
+  <!-- Deck Container -->
+  <main class="deck-container">
+
+    <!-- SLIDE 1: Cover / Overview -->
+    <section class="slide hero-slide active" id="slide-1">
+      <div class="slide-tag">✨ Executive Product Deck</div>
+      <h1 class="hero-title">MoneyMate</h1>
+      <p class="slide-subtitle" style="text-align: center; margin-left: auto; margin-right: auto;">
+        The Next-Generation Personal Wealth & AI Financial Intelligence Platform. Built for real data clarity, automated tracking, household security, and youth financial literacy.
+      </p>
+
+      <div class="grid-3" style="width: 100%; margin-top: 1rem;">
+        <div class="feature-card" style="text-align: center;">
+          <div class="card-icon" style="margin: 0 auto 1rem auto;">🤖</div>
+          <div class="card-title">AI Copilot & Insights</div>
+          <div class="card-desc">Personalized financial advisory powered by real user analytics & smart budgeting logic.</div>
+        </div>
+        <div class="feature-card" style="text-align: center;">
+          <div class="card-icon" style="margin: 0 auto 1rem auto;">📊</div>
+          <div class="card-title">Full Wealth Suite</div>
+          <div class="card-desc">Statement OCR, recurring commitment detector, safety net planner & time machine simulator.</div>
+        </div>
+        <div class="feature-card" style="text-align: center;">
+          <div class="card-icon" style="margin: 0 auto 1rem auto;">🐣</div>
+          <div class="card-title">MoneyMate Junior</div>
+          <div class="card-desc">Gamified child financial literacy mode protected by parental key security.</div>
+        </div>
+      </div>
+
+      <div class="hero-stats">
+        <div class="stat-item">
+          <div class="stat-val">100%</div>
+          <div class="stat-lbl">Real Data System</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">9+</div>
+          <div class="stat-lbl">Core Modules</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val">0s</div>
+          <div class="stat-lbl">Manual Friction</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: Financial Dashboard -->
+    <section class="slide" id="slide-2">
+      <div class="slide-tag">Module 01</div>
+      <h2 class="slide-title">Unified Financial Dashboard</h2>
+      <p class="slide-subtitle">A real-time command center giving users complete control over their cash flow, net worth, monthly spending, and high-frequency quick actions.</p>
+
+      <div class="grid-2">
+        <div class="feature-card">
+          <div class="card-icon">📈</div>
+          <div class="card-title">Real-Time Income vs. Expense</div>
+          <div class="card-desc">Instant visual feedback on total monthly earnings, category-level expenditure, and live savings rate calculations with synchronized health metrics.</div>
+          <span class="badge-pill">Live Sync</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">⚡</div>
+          <div class="card-title">One-Tap Quick Actions</div>
+          <div class="card-desc">Direct shortcuts to add income/expense, launch the AI Copilot, run the Wealth Time Machine, or check your Financial Health Score.</div>
+          <span class="badge-pill">Optimized Workflow</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🎨</div>
+          <div class="card-title">Curated Modern Aesthetics</div>
+          <div class="card-desc">Vibrant dark mode glassmorphism UI built with modern typography, smooth micro-interactions, and accessibility best practices.</div>
+          <span class="badge-pill">Premium Design</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🛡️</div>
+          <div class="card-title">Privacy-First Architecture</div>
+          <div class="card-desc">End-to-end data security ensuring no sensitive financial records are shared or stored unencrypted.</div>
+          <span class="badge-pill">Encrypted</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: OCR & Statement Scanner -->
+    <section class="slide" id="slide-3">
+      <div class="slide-tag">Module 02</div>
+      <h2 class="slide-title">Smart Import & OCR Scanner</h2>
+      <p class="slide-subtitle">Eliminate manual data entry. Automated bank statement parsing and intelligent optical character recognition for physical receipts.</p>
+
+      <div class="grid-2">
+        <div class="feature-card">
+          <div class="card-icon">📄</div>
+          <div class="card-title">Automated Bank Statement Import</div>
+          <div class="card-desc">Supports uploading multi-bank PDF/CSV/Excel statements. Automatically extracts transactions, dates, amounts, and merchant tags seamlessly.</div>
+          <span class="badge-pill">Multi-Format Support</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">📷</div>
+          <div class="card-title">Intelligent Receipt OCR</div>
+          <div class="card-desc">Scan physical receipts using device camera or file upload. Extracts merchant name, total price, line items, and date instantly.</div>
+          <span class="badge-pill">Instant Scan</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🏷️</div>
+          <div class="card-title">Auto-Categorization Engine</div>
+          <div class="card-desc">Intelligently classifies transactions into Food, Utilities, Shopping, Bills, Transport, and Entertainment without user effort.</div>
+          <span class="badge-pill">Smart ML Tagging</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🔍</div>
+          <div class="card-title">Duplicate & Anomaly Shield</div>
+          <div class="card-desc">Prevents double-counting imported statement entries and flags suspicious or unusual spending spikes automatically.</div>
+          <span class="badge-pill">Data Integrity</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: Bills & Commitments -->
+    <section class="slide" id="slide-4">
+      <div class="slide-tag">Module 03</div>
+      <h2 class="slide-title">Bills & Commitments Radar</h2>
+      <p class="slide-subtitle">Never miss a bill or EMI payment again. Automated detection of recurring subscriptions, utilities, and financial commitments.</p>
+
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="card-icon">🔄</div>
+          <div class="card-title">Auto-Subscription Detection</div>
+          <div class="card-desc">Algorithms scan transaction history to auto-identify Netflix, Spotify, Gym, SIPs, and recurring bills.</div>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">📅</div>
+          <div class="card-title">Upcoming Due Calendar</div>
+          <div class="card-desc">Organized chronological list of due dates with status indicators (Paid, Upcoming, Dues Pending).</div>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🚨</div>
+          <div class="card-title">Cash Flow Defense</div>
+          <div class="card-desc">Warns users if upcoming commitments exceed predicted account balance to prevent overdrafts.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: Health Score & Safety Net -->
+    <section class="slide" id="slide-5">
+      <div class="slide-tag">Module 04</div>
+      <h2 class="slide-title">Financial Health & Safety Net</h2>
+      <p class="slide-subtitle">Comprehensive financial diagnostic score paired with a data-driven survival planner for emergencies.</p>
+
+      <div class="grid-2">
+        <div class="feature-card">
+          <div class="card-icon">🩺</div>
+          <div class="card-title">Algorithmic Health Score (0–100)</div>
+          <div class="card-desc">Evaluates 4 critical pillars: Savings Rate, Emergency Fund Cushion, Debt Ratio, and Budget Adherence. Provides actionable steps to improve scores.</div>
+          <span class="badge-pill">Holistic Diagnostics</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🛟</div>
+          <div class="card-title">Financial Survival Planner</div>
+          <div class="card-desc">Calculates exact monthly survival expense baselines, calculates runway months, and helps build a bulletproof emergency fund.</div>
+          <span class="badge-pill">Risk Management</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: Time Machine Simulator -->
+    <section class="slide" id="slide-6">
+      <div class="slide-tag">Module 05</div>
+      <h2 class="slide-title">Wealth Time Machine</h2>
+      <p class="slide-subtitle">Interactive future wealth forecasting engine. Project net worth expansion over 5, 10, 20, or 30 years based on current habits.</p>
+
+      <div class="grid-2">
+        <div class="feature-card">
+          <div class="card-icon">⏳</div>
+          <div class="card-title">Compound Growth Projections</div>
+          <div class="card-desc">Simulate how monthly savings, investment yield %, and inflation impact long-term financial independence.</div>
+          <span class="badge-pill">Future Forecast</span>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🎯</div>
+          <div class="card-title">Life Milestone Modeler</div>
+          <div class="card-desc">Test scenario outcomes: "What if I buy a home in 3 years?", "What if I increase SIP by 10%?", or "What if I take a sabbatical?"</div>
+          <span class="badge-pill">Scenario Simulator</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: MoneyMate Junior -->
+    <section class="slide" id="slide-7">
+      <div class="slide-tag">Module 06</div>
+      <h2 class="slide-title">MoneyMate Junior</h2>
+      <p class="slide-subtitle">A dedicated, kid-friendly financial literacy experience empowering children to learn smart saving habits early.</p>
+
+      <div class="grid-3">
+        <div class="feature-card">
+          <div class="card-icon">🔐</div>
+          <div class="card-title">Parental PIN Security</div>
+          <div class="card-desc">Parental Key gatekeeping ensures only parents can deposit allowance, adjust budgets, or manage settings.</div>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🐖</div>
+          <div class="card-title">Allowance & Goal Saver</div>
+          <div class="card-desc">Visual progress bars for kids' savings goals (toys, bikes, games) with celebratory micro-animations.</div>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">⭐</div>
+          <div class="card-title">Chore Rewards & Quests</div>
+          <div class="card-desc">Gamified task completion engine rewarding financial discipline with allowance payouts.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: Knowledge Hub & Live Link -->
+    <section class="slide" id="slide-8">
+      <div class="slide-tag">Module 07 & Conclusion</div>
+      <h2 class="slide-title">Knowledge Hub & Live Deployment</h2>
+      <p class="slide-subtitle">Tailored financial education, tax regime calculators, and immediate access to the live working application.</p>
+
+      <div class="grid-2" style="margin-bottom: 2rem;">
+        <div class="feature-card">
+          <div class="card-icon">📚</div>
+          <div class="card-title">Personalized Knowledge Hub</div>
+          <div class="card-desc">Curated articles, tax guides (New vs. Old Regime comparison), debt payoff strategies, and SIP investment basics.</div>
+        </div>
+        <div class="feature-card">
+          <div class="card-icon">🚀</div>
+          <div class="card-title">Live Vercel Cloud Deployment</div>
+          <div class="card-desc">Fully built, optimized, and deployed live on Vercel with automated CI/CD and sub-second loading performance.</div>
+        </div>
+      </div>
+
+      <div style="text-align: center; padding: 2rem; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 16px;">
+        <h3 style="font-size: 1.5rem; color: #ffffff; margin-bottom: 0.5rem;">Experience MoneyMate Live</h3>
+        <p style="color: var(--text-muted); margin-bottom: 1.25rem;">Try out the full suite, import statements, test the AI Copilot & Junior mode now.</p>
+        <a href="https://money-mate-finance-app.vercel.app/" target="_blank" class="btn btn-primary" style="font-size: 1rem; padding: 0.8rem 2rem;">
+          🔗 Open Live App: money-mate-finance-app.vercel.app
+        </a>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Control Bar -->
+  <footer class="controls-footer">
+    <div class="nav-controls">
+      <button onclick="prevSlide()" class="btn btn-secondary" id="btn-prev">⬅️ Previous</button>
+      <button onclick="nextSlide()" class="btn btn-primary" id="btn-next">Next ➡️</button>
+    </div>
+
+    <div class="dots-container" id="dots-container"></div>
+
+    <div class="slide-indicator" id="slide-indicator">Slide 1 of 8</div>
+  </footer>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 8;
+
+    function initDots() {
+      const container = document.getElementById('dots-container');
+      container.innerHTML = '';
+      for (let i = 1; i <= totalSlides; i++) {
+        const dot = document.createElement('div');
+        dot.className = `dot ${i === currentSlide ? 'active' : ''}`;
+        dot.onclick = () => goToSlide(i);
+        container.appendChild(dot);
+      }
+    }
+
+    function updateDeck() {
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        slide.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      document.querySelectorAll('.dot').forEach((dot, idx) => {
+        dot.classList.toggle('active', idx + 1 === currentSlide);
+      });
+
+      document.getElementById('slide-indicator').innerText = `Slide ${currentSlide} of ${totalSlides}`;
+      document.getElementById('btn-prev').style.opacity = currentSlide === 1 ? '0.5' : '1';
+      document.getElementById('btn-prev').style.pointerEvents = currentSlide === 1 ? 'none' : 'auto';
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateDeck();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateDeck();
+      }
+    }
+
+    function goToSlide(n) {
+      currentSlide = n;
+      updateDeck();
+    }
+
+    // Keyboard Arrow Keys Navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      }
+    });
+
+    // Download standalone HTML file function
+    function downloadPresentationHTML() {
+      const htmlContent = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'MoneyMate_Feature_Presentation.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    initDots();
+    updateDeck();
+  </script>
+</body>
+</html>

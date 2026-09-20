@@ -432,6 +432,20 @@ export default function Settings({ onNav, user, onLogout }: SettingsProps) {
                 right={<CheckCircle size={16} className="text-emerald-500" />}
               />
               <Row
+                label="Product Presentation Deck"
+                desc="View or download the 8-slide executive feature presentation (.html / PDF)"
+                right={
+                  <a
+                    href="/presentation.html"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-500 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-600 transition-colors shadow-sm"
+                  >
+                    <Download size={13} /> View / Download Deck
+                  </a>
+                }
+              />
+              <Row
                 label="Export Financial Data"
                 desc="Download a complete JSON export of all your transactions, budgets, goals & profile"
                 right={

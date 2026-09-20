@@ -60,6 +60,8 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
   useEffect(() => {
     refreshData();
     loadSharedExpenses();
+    const interval = setInterval(loadSharedExpenses, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadSharedExpenses = async () => {
@@ -74,7 +76,11 @@ export default function BillsCommitments({ onNav }: BillsCommitmentsProps) {
       if (res && res.success && Array.isArray(res.expenses)) {
         dataStore.setSharedExpenses(res.expenses);
         setSharedExpenses(res.expenses);
-        setSharedSummary(dataStore.getSharedExpenseSummary());
+        if (res.summary) {
+          setSharedSummary(res.summary);
+        } else {
+          setSharedSummary(dataStore.getSharedExpenseSummary());
+        }
       }
     } catch (err) {
       console.warn('Backend shared expense load fallback:', err);

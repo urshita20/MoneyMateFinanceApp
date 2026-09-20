@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://moneymate-backend-ten.vercel.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://moneymate-backend-ten.vercel.app';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('moneymate_token');

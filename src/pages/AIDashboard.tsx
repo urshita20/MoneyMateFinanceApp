@@ -1,11 +1,13 @@
-import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Calendar, DollarSign } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Calendar, DollarSign, Loader2 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { monthlyData } from '../data/mockData'
+import { api } from '../services/api'
 
-const spendingForecast = [
+const defaultSpendingForecast = [
   { week: 'W1', actual: 12400, forecast: null },
   { week: 'W2', actual: 14800, forecast: null },
   { week: 'W3', actual: 11200, forecast: null },
@@ -13,7 +15,7 @@ const spendingForecast = [
   { week: 'W5', actual: null, forecast: 14200 },
 ]
 
-const savingsPrediction = [
+const defaultSavingsPrediction = [
   { month: 'Aug', predicted: 34200 },
   { month: 'Sep', predicted: 36800 },
   { month: 'Oct', predicted: 35400 },
@@ -21,7 +23,7 @@ const savingsPrediction = [
   { month: 'Dec', predicted: 41000 },
 ]
 
-const categoryInsights = [
+const defaultCategoryInsights = [
   { category: 'Food & Dining', spent: 12400, vsLast: +18, emoji: '🍕', alert: true },
   { category: 'Transport', spent: 4200, vsLast: -5, emoji: '🚗', alert: false },
   { category: 'Shopping', spent: 8900, vsLast: +12, emoji: '🛍️', alert: true },
@@ -29,7 +31,7 @@ const categoryInsights = [
   { category: 'Health', spent: 1890, vsLast: -15, emoji: '💊', alert: false },
 ]
 
-const upcomingBills = [
+const defaultUpcomingBills = [
   { name: 'Internet Bill', amount: 1499, due: 'Today', emoji: '📶', urgent: true },
   { name: 'Electricity', amount: 1850, due: 'Jul 20', emoji: '⚡', urgent: true },
   { name: 'Rent', amount: 25000, due: 'Jul 25', emoji: '🏠', urgent: false },
@@ -71,9 +73,60 @@ const aiCards = [
   },
 ]
 
+const defaultTips = [
+  { icon: '🍽️', text: 'You spent 22% more on dining this month. Try cooking 3 days/week to save ₹2,400.', type: 'warning' as const },
+  { icon: '💡', text: 'Reducing streaming subscriptions (3 active) can save you ₹14,000 annually.', type: 'tip' as const },
+  { icon: '📈', text: 'Your savings rate of 38.4% puts you in the top 25% of MoneyMate users. Keep it up!', type: 'positive' as const },
+]
+
 export default function AIDashboard() {
+  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState({
+    summary: {
+      text: 'You spent 22% more on dining this month. You are likely to save ₹34,200 next month at your current pace. Reducing subscriptions could save you ₹14,000 annually.',
+      income: 85000,
+      expenses: 52300,
+      savings: 32700,
+      healthScore: 83
+    },
+    spendingForecast: defaultSpendingForecast,
+    savingsPrediction: defaultSavingsPrediction,
+    categoryInsights: defaultCategoryInsights,
+    upcomingBills: defaultUpcomingBills,
+    tips: defaultTips
+  })
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const response = await api.ai.getDashboard()
+        if (response && response.success) {
+          setData({
+            summary: response.summary || data.summary,
+            spendingForecast: response.spendingForecast || defaultSpendingForecast,
+            savingsPrediction: response.savingsPrediction || defaultSavingsPrediction,
+            categoryInsights: response.categoryInsights || defaultCategoryInsights,
+            upcomingBills: response.upcomingBills || defaultUpcomingBills,
+            tips: response.tips || defaultTips
+          })
+        }
+      } catch (error) {
+        console.error('Failed to fetch AI dashboard', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboard()
+  }, [])
+
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="max-w-5xl space-y-6 relative">
+      {loading && (
+        <div className="absolute inset-0 bg-white/50 dark:bg-slate-950/50 z-50 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">AI Insights</h1>
@@ -101,9 +154,7 @@ export default function AIDashboard() {
           <div className="grid grid-cols-3 gap-4">
             <div className="col-span-2">
               <p className="text-base text-slate-200 leading-relaxed mb-3">
-                You spent <span className="text-rose-400 font-bold">22% more on dining</span> this month.
-                You are likely to <span className="text-emerald-400 font-bold">save ₹34,200</span> next month at your current pace.
-                Reducing subscriptions could save you <span className="text-amber-400 font-bold">₹14,000 annually</span>.
+                {data.summary.text}
               </p>
               <div className="flex gap-2 flex-wrap">
                 {['Cut dining ₹2k', 'Cancel 2 subs', 'SIP +₹1,000', 'EMI prepayment?'].map(t => (
@@ -115,10 +166,10 @@ export default function AIDashboard() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { label: 'Income', value: '₹85K', pos: true },
-                { label: 'Expenses', value: '₹52.3K', pos: false },
-                { label: 'Saved', value: '₹32.7K', pos: true },
-                { label: 'Health', value: '83/100', pos: true },
+                { label: 'Income', value: `₹${(data.summary.income/1000).toFixed(1)}K`, pos: true },
+                { label: 'Expenses', value: `₹${(data.summary.expenses/1000).toFixed(1)}K`, pos: false },
+                { label: 'Saved', value: `₹${(data.summary.savings/1000).toFixed(1)}K`, pos: true },
+                { label: 'Health', value: `${data.summary.healthScore}/100`, pos: true },
               ].map(s => (
                 <div key={s.label} className="bg-white/5 border border-white/10 rounded-xl p-3 text-center">
                   <p className={`text-sm font-black ${s.pos ? 'text-emerald-400' : 'text-rose-400'}`}>{s.value}</p>
@@ -159,7 +210,7 @@ export default function AIDashboard() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={spendingForecast}>
+            <AreaChart data={data.spendingForecast}>
               <defs>
                 <linearGradient id="forecastGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.2} />
@@ -180,7 +231,7 @@ export default function AIDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Savings Prediction (Next 5 Months)</h3>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={savingsPrediction} barSize={28}>
+            <BarChart data={data.savingsPrediction} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={v => `₹${v / 1000}K`} width={40} />
@@ -197,7 +248,7 @@ export default function AIDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Category Insights</h3>
           <div className="space-y-3">
-            {categoryInsights.map(c => (
+            {data.categoryInsights.map(c => (
               <div key={c.category} className="flex items-center gap-3">
                 <span className="text-xl flex-shrink-0">{c.emoji}</span>
                 <div className="flex-1 min-w-0">
@@ -225,7 +276,7 @@ export default function AIDashboard() {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Upcoming Bills</h3>
           <div className="space-y-3">
-            {upcomingBills.map(bill => (
+            {data.upcomingBills.map(bill => (
               <div key={bill.name} className={`flex items-center gap-3 p-3 rounded-xl ${bill.urgent ? 'bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-800/30' : 'bg-slate-50 dark:bg-slate-800'}`}>
                 <span className="text-xl">{bill.emoji}</span>
                 <div className="flex-1 min-w-0">
@@ -244,11 +295,7 @@ export default function AIDashboard() {
 
       {/* AI tips strip */}
       <div className="grid grid-cols-3 gap-4">
-        {[
-          { icon: '🍽️', text: 'You spent 22% more on dining this month. Try cooking 3 days/week to save ₹2,400.', type: 'warning' },
-          { icon: '💡', text: 'Reducing streaming subscriptions (3 active) can save you ₹14,000 annually.', type: 'tip' },
-          { icon: '📈', text: 'Your savings rate of 38.4% puts you in the top 25% of MoneyMate users. Keep it up!', type: 'positive' },
-        ].map((tip, i) => (
+        {data.tips.map((tip, i) => (
           <div key={i} className={`rounded-2xl p-5 border ${
             tip.type === 'warning' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40'
             : tip.type === 'positive' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/40'

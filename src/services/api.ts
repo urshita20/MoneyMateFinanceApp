@@ -234,6 +234,12 @@ export const api = {
       });
       return res.json();
     },
+    getDashboard: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/ai/dashboard`, {
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
   },
 
   // Shared Expenses API

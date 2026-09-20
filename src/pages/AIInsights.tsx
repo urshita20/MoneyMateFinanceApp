@@ -1,8 +1,10 @@
-import { Sparkles, TrendingUp, TrendingDown, Target, Activity, AlertCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Sparkles, TrendingUp, TrendingDown, Target, Activity, AlertCircle, Loader2 } from 'lucide-react'
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts'
 import { monthlyData, weeklyTrend, spendingByCategory } from '../data/mockData'
+import { api } from '../services/api'
 
 const weeklyExpenses = weeklyTrend.map(d => ({ ...d, budget: 3000 }))
 
@@ -13,12 +15,89 @@ const categoryComparison = spendingByCategory.map(c => ({
   color: c.color,
 }))
 
+const defaultTips = [
+  {
+    icon: '💡',
+    title: 'Switch to monthly Netflix plan',
+    desc: 'You could save ₹1,800/year by switching from monthly to annual Netflix subscription.',
+    savings: '₹1,800/yr',
+    type: 'tip',
+  },
+  {
+    icon: '⚠️',
+    title: 'Entertainment spending flagged',
+    desc: 'You spent ₹3,200 on entertainment against a ₹3,000 budget. Consider planning ahead.',
+    savings: 'Save ₹200',
+    type: 'warning',
+  },
+  {
+    icon: '🎯',
+    title: 'Emergency fund on track',
+    desc: "At your current savings rate, you'll reach your ₹3 lakh emergency fund by November 2025.",
+    savings: 'On track',
+    type: 'positive',
+  },
+  {
+    icon: '🚗',
+    title: 'High transport expenses',
+    desc: 'Transport costs are 40% higher on weekends. Consider carpooling or metro on weekends.',
+    savings: 'Save ₹1,200/mo',
+    type: 'warning',
+  },
+]
+
 export default function AIInsights() {
+  const [loading, setLoading] = useState(true)
+  const [insights, setInsights] = useState<any[]>(defaultTips)
+  const [summary, setSummary] = useState({
+    text: "You spent 18% more on dining this month compared to last month. Your overall savings rate is 38.4% — well above the 20% recommended threshold.",
+    secondaryText: "If you reduce weekend dining by ₹2,000 and switch 2 Uber rides per week to metro, you could save an additional ₹4,800/month, reaching your Emergency Fund goal 2 months earlier."
+  })
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [insightsRes, summaryRes] = await Promise.all([
+          api.ai.getInsights().catch(() => null),
+          api.analytics.getSummary().catch(() => null)
+        ])
+
+        if (insightsRes && insightsRes.success && insightsRes.insights) {
+          // Map backend insights to the required format
+          setInsights(insightsRes.insights.map((i: any) => ({
+            icon: i.icon || '💡',
+            title: i.title,
+            desc: i.description,
+            savings: i.actionLabel || '',
+            type: i.type === 'alert' ? 'warning' : i.type === 'achievement' ? 'positive' : 'tip'
+          })))
+        }
+
+        if (summaryRes && summaryRes.success && summaryRes.summary) {
+          // If you want to use data from summaryRes, update it here.
+          // For now, keeping the fallback as requested if not matched precisely, 
+          // but if we need to use summary data we can adjust.
+        }
+      } catch (error) {
+        console.error('Error fetching AI insights data', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
   return (
-    <div className="max-w-5xl space-y-6">
+    <div className="max-w-5xl space-y-6 relative">
+      {loading && (
+        <div className="absolute inset-0 bg-white/50 dark:bg-slate-950/50 z-50 flex items-center justify-center rounded-2xl backdrop-blur-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      )}
+
       <div>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">AI Insights</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Powered by Gemini AI — July 2025</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Powered by MoneyMate AI — July 2025</p>
       </div>
 
       {/* AI Summary card */}
@@ -32,14 +111,22 @@ export default function AIInsights() {
             <span className="text-sm font-medium text-slate-300">AI Monthly Summary</span>
           </div>
           <p className="text-lg font-semibold text-white mb-3 leading-relaxed">
-            You spent <span className="text-rose-400">18% more on dining</span> this month compared to last month. Your
-            overall savings rate is <span className="text-emerald-400">38.4%</span> — well above the 20% recommended
-            threshold.
+            {summary.text.split('18% more on dining').length > 1 ? (
+              <>
+                You spent <span className="text-rose-400">18% more on dining</span> this month compared to last month. Your
+                overall savings rate is <span className="text-emerald-400">38.4%</span> — well above the 20% recommended
+                threshold.
+              </>
+            ) : summary.text}
           </p>
           <p className="text-sm text-slate-400 leading-relaxed">
-            If you reduce weekend dining by ₹2,000 and switch 2 Uber rides per week to metro, you could save an
-            additional <strong className="text-white">₹4,800/month</strong>, reaching your Emergency Fund goal 2 months
-            earlier.
+            {summary.secondaryText.split('₹4,800/month').length > 1 ? (
+              <>
+                If you reduce weekend dining by ₹2,000 and switch 2 Uber rides per week to metro, you could save an
+                additional <strong className="text-white">₹4,800/month</strong>, reaching your Emergency Fund goal 2 months
+                earlier.
+              </>
+            ) : summary.secondaryText}
           </p>
         </div>
       </div>
@@ -162,36 +249,7 @@ export default function AIInsights() {
 
       {/* AI tips */}
       <div className="grid grid-cols-2 gap-4">
-        {[
-          {
-            icon: '💡',
-            title: 'Switch to monthly Netflix plan',
-            desc: 'You could save ₹1,800/year by switching from monthly to annual Netflix subscription.',
-            savings: '₹1,800/yr',
-            type: 'tip',
-          },
-          {
-            icon: '⚠️',
-            title: 'Entertainment spending flagged',
-            desc: 'You spent ₹3,200 on entertainment against a ₹3,000 budget. Consider planning ahead.',
-            savings: 'Save ₹200',
-            type: 'warning',
-          },
-          {
-            icon: '🎯',
-            title: 'Emergency fund on track',
-            desc: "At your current savings rate, you'll reach your ₹3 lakh emergency fund by November 2025.",
-            savings: 'On track',
-            type: 'positive',
-          },
-          {
-            icon: '🚗',
-            title: 'High transport expenses',
-            desc: 'Transport costs are 40% higher on weekends. Consider carpooling or metro on weekends.',
-            savings: 'Save ₹1,200/mo',
-            type: 'warning',
-          },
-        ].map((tip, i) => (
+        {insights.map((tip, i) => (
           <div
             key={i}
             className={`rounded-2xl p-5 border ${
@@ -207,17 +265,19 @@ export default function AIInsights() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-slate-900 dark:text-white mb-1">{tip.title}</p>
                 <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{tip.desc}</p>
-                <span
-                  className={`inline-block mt-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    tip.type === 'warning'
-                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
-                      : tip.type === 'positive'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
-                      : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
-                  }`}
-                >
-                  {tip.savings}
-                </span>
+                {tip.savings && (
+                  <span
+                    className={`inline-block mt-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      tip.type === 'warning'
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400'
+                        : tip.type === 'positive'
+                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400'
+                        : 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400'
+                    }`}
+                  >
+                    {tip.savings}
+                  </span>
+                )}
               </div>
             </div>
           </div>

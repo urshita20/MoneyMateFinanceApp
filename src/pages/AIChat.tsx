@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Sparkles, Plus, Trash2 } from 'lucide-react'
+import { api } from '../services/api'
 
 interface Message {
   id: number
@@ -26,19 +27,6 @@ const conversations = [
   { id: 4, title: 'Emergency fund setup', date: 'Jul 10' },
 ]
 
-const aiResponses: Record<string, string> = {
-  default: "Based on your financial data, here's my analysis:\n\n**Current status:** You're spending ₹52,340/month against ₹85,000 income, leaving a savings rate of **38.4%**.\n\n**Top recommendation:** Your dining expenses are 18% higher than last month at ₹12,400. Setting a ₹10,000 limit on food would save you ₹2,400/month — that's ₹28,800/year.\n\nWould you like me to create a custom savings plan?",
-  save: "Here are 5 ways to save more this month:\n\n1. **Cut dining out**: You spent ₹12,400 on food. Cooking at home 3x more per week could save ₹3,000.\n\n2. **Cancel unused subscriptions**: I see Netflix, Hotstar, and Spotify — consider keeping just one.\n\n3. **Use metro on weekends**: Weekend Uber spend is 40% of your total transport. Metro saves ~₹800/month.\n\n4. **Enable UPI cashback**: Set up Paytm/PhonePe cashback offers for grocery shopping.\n\n5. **Automate savings**: Set up an auto-transfer of ₹10,000 on salary day to a separate account.\n\nEstimated monthly savings: **₹4,800–₹6,500** 🎯",
-  vacation: "Based on your finances, a Goa vacation is **definitely feasible**! Here's a breakdown:\n\n**Your Goa vacation budget estimate:**\n- Flights (round trip): ₹6,000–₹12,000\n- Hotel (4 nights): ₹8,000–₹16,000\n- Food & activities: ₹5,000\n- Shopping: ₹3,000\n- **Total: ₹22,000–₹36,000**\n\n**Can you afford it?** Yes! You have ₹32,000 saved toward your Goa goal. You could go in February 2026 with your current savings rate. Want me to create a dedicated vacation savings plan?",
-}
-
-function getAIResponse(message: string): string {
-  const lower = message.toLowerCase()
-  if (lower.includes('save') || lower.includes('saving')) return aiResponses.save
-  if (lower.includes('vacation') || lower.includes('goa') || lower.includes('afford')) return aiResponses.vacation
-  return aiResponses.default
-}
-
 export default function AIChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -57,7 +45,7 @@ export default function AIChat() {
 
   useEffect(() => { scrollToBottom() }, [messages])
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return
 
     const userMsg: Message = {
@@ -71,16 +59,26 @@ export default function AIChat() {
     setInput('')
     setLoading(true)
 
-    setTimeout(() => {
+    try {
+      const response = await api.ai.chat(text)
       const aiMsg: Message = {
         id: Date.now() + 1,
         role: 'assistant',
-        text: getAIResponse(text),
+        text: response.reply || response.message || "I couldn't process that. Try asking about your budget, spending, or savings!",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       }
       setMessages(m => [...m, aiMsg])
+    } catch (error) {
+      const errorMsg: Message = {
+        id: Date.now() + 1,
+        role: 'assistant',
+        text: "Sorry, I'm having trouble connecting right now. Please try again in a moment! 🔄",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }
+      setMessages(m => [...m, errorMsg])
+    } finally {
       setLoading(false)
-    }, 1200)
+    }
   }
 
   return (

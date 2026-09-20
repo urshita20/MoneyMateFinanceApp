@@ -433,16 +433,25 @@ export default function Settings({ onNav, user, onLogout }: SettingsProps) {
               />
               <Row
                 label="Product Presentation Deck"
-                desc="View or download the 8-slide executive feature presentation (.html / PDF)"
+                desc="Download PowerPoint (.pptx) file or view interactive HTML / PDF slide deck"
                 right={
-                  <a
-                    href="/presentation.html"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-500 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-600 transition-colors shadow-sm"
-                  >
-                    <Download size={13} /> View / Download Deck
-                  </a>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href="/MoneyMate_Presentation.pptx"
+                      download
+                      className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-500 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-600 transition-colors shadow-sm"
+                    >
+                      <Download size={13} /> Download .pptx
+                    </a>
+                    <a
+                      href="/presentation.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition-colors"
+                    >
+                      View Deck
+                    </a>
+                  </div>
                 }
               />
               <Row

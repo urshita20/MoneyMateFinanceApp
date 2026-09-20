@@ -272,5 +272,22 @@ export const api = {
       return res.json();
     },
   },
+
+  // Notifications API
+  notifications: {
+    getAll: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/notifications`, {
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
+    markAllRead: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+      });
+      return res.json();
+    },
+  },
 };
 

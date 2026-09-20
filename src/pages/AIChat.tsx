@@ -28,11 +28,14 @@ const conversations = [
 ]
 
 export default function AIChat() {
+  const user = JSON.parse(localStorage.getItem('moneymate_user') || '{}');
+  const firstName = user?.name ? user.name.split(' ')[0] : 'there';
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       role: 'assistant',
-      text: "Hi Arjun! 👋 I'm your AI financial assistant. I have access to your spending data, budgets, and goals. Ask me anything about your finances!",
+      text: `Hi ${firstName}! 👋 I'm your AI financial assistant. I have access to your spending data, budgets, and goals. Ask me anything about your finances!`,
       timestamp: '10:30 AM',
     },
   ])
